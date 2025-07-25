@@ -1,13 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.bg-custom {
+  background-color: #1a202c; /* Màu tối giống mẫu Pluto */
+}
+
+.text-custom {
+  color: #e2e8f0; /* Màu chữ sáng trên nền tối */
+}
+
+.card {
+  @apply bg-white p-4 rounded-lg shadow-md text-center;
+}
+
+.card h2 {
+  @apply text-lg font-semibold mb-2;
+}
+
+.card p {
+  @apply text-xl;
 }
