@@ -3,6 +3,7 @@ import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import BikeImage from './assets/bike.jpg';
+
 const ADMIN_EMAIL = "linhpnhe176376@fpt.edu.vn"; // Thay bằng email admin của bạn
 
 const Login = () => {
@@ -28,6 +29,10 @@ const Login = () => {
         return;
       }
 
+      // Lưu thời gian login để giới hạn phiên (5 phút tại chỗ khác)
+      localStorage.setItem("loginTime", Date.now().toString());
+
+      // Điều hướng tới dashboard
       navigate("/dashboard");
     } catch (err) {
       setError("Sai email hoặc mật khẩu");
@@ -47,11 +52,9 @@ const Login = () => {
             {/* Person on Bicycle Illustration */}
             <img
               src={BikeImage}
-      alt="Person riding a blue bicycle"
+              alt="Person riding a blue bicycle"
               className="mx-auto w-80 h-80 object-contain rounded-xl shadow-md"
             />
-
-            {/* You can replace above data:image with your own bicycle SVG/PNG asset */}
           </div>
           <div className="space-y-4">
             <h1 className="text-4xl font-bold text-gray-800">

@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
@@ -26,7 +26,7 @@ const LayoutWithSidebar = ({ children }) => (
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Login />} />
@@ -94,7 +94,7 @@ function App() {
           }
         />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

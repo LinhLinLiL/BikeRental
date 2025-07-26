@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { ref, onValue } from "firebase/database";
 import {
   BarChart,
@@ -16,12 +16,31 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function StationStats() {
   const [stations, setStations] = useState([]);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // Lấy data realtime từ Firebase
+  const navigate = useNavigate();
+
+  // Kiểm tra đăng nhập Firebase Auth
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigate("/login", { replace: true });
+      } else {
+        setAuthChecked(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Chỉ load dữ liệu khi đã xác thực
+  useEffect(() => {
+    if (!authChecked) return;
+
     const statisticsRef = ref(db, "statistics");
     const unsubscribe = onValue(statisticsRef, (snapshot) => {
       const data = snapshot.val();
@@ -37,8 +56,18 @@ export default function StationStats() {
         setStations([]);
       }
     });
+
     return () => unsubscribe();
-  }, []);
+  }, [authChecked]);
+
+  if (!authChecked) {
+    // Đang chờ xác thực đăng nhập
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-700">
+        Đang kiểm tra đăng nhập...
+      </div>
+    );
+  }
 
   // Tổng số liệu
   const totalRentals = stations.reduce((sum, s) => sum + s.rentals, 0);
@@ -49,7 +78,6 @@ export default function StationStats() {
       ? ((totalReturns / (totalRentals + totalReturns)) * 100).toFixed(1)
       : 0;
 
-  // Card thống kê tổng quan
   const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between">
@@ -176,6 +204,7 @@ export default function StationStats() {
                   backgroundColor: "white",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
+                  fontSize: "14px",
                 }}
               />
               <Area
@@ -309,7 +338,9 @@ export default function StationStats() {
                 {/* Footer */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex justify-between text-sm text-gray-600">
-                    <span>Tổng hoạt động: <strong>{totalActivity}</strong></span>
+                    <span>
+                      Tổng hoạt động: <strong>{totalActivity}</strong>
+                    </span>
                     <span>Cập nhật: {new Date().toLocaleTimeString()}</span>
                   </div>
                 </div>

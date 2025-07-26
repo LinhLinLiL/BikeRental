@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { ref, onValue } from "firebase/database";
+import { auth } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [rentalList, setRentalList] = useState([]);
@@ -13,11 +16,32 @@ const Dashboard = () => {
     returned: "",
   });
 
-  // Phân trang state
+  // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  // State cho theo dõi trạng thái đăng nhập
+  const [authChecked, setAuthChecked] = useState(false);
+  const navigate = useNavigate();
+
+  // Kiểm tra trạng thái đăng nhập khi component mount
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // Nếu chưa login thì chuyển về login
+        navigate("/login");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Load dữ liệu rentalList realtime từ Firebase hoàn thành chỉ khi đã xác thực
+  useEffect(() => {
+    if (!authChecked) return; // Chỉ chạy khi đã xác thực
+
     const rentalRef = ref(db, "rentalHistory");
     const unsubscribe = onValue(rentalRef, (snapshot) => {
       const data = snapshot.val();
@@ -36,7 +60,7 @@ const Dashboard = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [authChecked]);
 
   const formatDateToYMD = (timestamp) => {
     const d = new Date(timestamp);
@@ -71,36 +95,40 @@ const Dashboard = () => {
     );
   });
 
-  // Tính tổng số trang
   const totalPages = Math.ceil(filteredRentals.length / itemsPerPage);
 
-  // Lấy bản ghi trang hiện tại
   const currentRentals = filteredRentals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Khi filter thay đổi reset trang 1
-  React.useEffect(() => {
+  // Reset trang khi filter thay đổi
+  useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
 
-  // Chuyển trang
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
 
+  // Nếu chưa check xong auth thì có thể hiện loading hoặc khoảng trống để tránh flash nội dung
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-700">
+        Đang kiểm tra đăng nhập...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header moderne */}
+      {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 mb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Lịch Sử Thuê Xe</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Quản lý lịch sử thuê xe đạp thông minh
-            </p>
+            <p className="text-gray-600 text-sm mt-1">Quản lý lịch sử thuê xe đạp thông minh</p>
           </div>
           <div className="flex items-center space-x-2">
             <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -121,7 +149,8 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {/* Các input, select như bạn có */}
+            {/* Các input, select như trước */}
+            {/* ... giữ nguyên như bạn đang dùng */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Loại Trả Xe</label>
               <select
@@ -197,7 +226,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bảng hiển thị phân trang */}
+        {/* Bảng dữ liệu với phân trang */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">

@@ -1,5 +1,5 @@
 import {
-  FaUser,
+  // FaUser,
   FaBicycle,
   FaCamera,
   FaCog,
@@ -12,23 +12,44 @@ import {
   FaServer,
 } from "react-icons/fa";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [authChecked, setAuthChecked] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Thêm state cho nhóm menu mở rộng / thu gọn
   const [openGroups, setOpenGroups] = useState({
     main: true,
     management: true,
   });
+
+  // Kiểm tra đăng nhập
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigate("/login", { replace: true });
+      } else {
+        setAuthChecked(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-blue-600">
+        Đang kiểm tra đăng nhập...
+      </div>
+    );
+  }
 
   const handleToggleGroup = (groupKey) => {
     setOpenGroups((prev) => ({
@@ -46,7 +67,6 @@ const Sidebar = () => {
     }
   };
 
-  // Lớp CSS cho menu item
   const linkClasses = (path) =>
     `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative cursor-pointer mb-1 ${
       location.pathname === path
@@ -109,9 +129,7 @@ const Sidebar = () => {
       {/* Profile Section */}
       {!isCollapsed && (
         <div className="p-4 border-b border-blue-400/30">
-          {/* Bọc toàn bộ phần profile trong box trắng bo góc */}
           <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-200">
-            {/* Phần chính profile (avatar, tên, email, mũi tên) */}
             <div
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -138,7 +156,6 @@ const Sidebar = () => {
               />
             </div>
 
-            {/* Phần dropdown nội dung khi mở */}
             {isProfileOpen && (
               <div className="mt-3 py-2 rounded-xl border border-gray-200 bg-white shadow-sm animate-in slide-in-from-top-2 duration-200">
                 <button className="flex items-center gap-3 w-full px-4 py-3 text-sm text-blue-800 hover:text-blue-900 hover:bg-blue-100 transition-all duration-200 rounded-lg mb-2">
@@ -160,25 +177,29 @@ const Sidebar = () => {
         {Object.entries(groupedItems).map(([category, items]) => (
           <div key={category}>
             {!isCollapsed && (
-              <div className="mb-2 flex items-center justify-between cursor-pointer select-none"
-                   onClick={() => handleToggleGroup(category)}
-                   aria-expanded={openGroups[category]}
-                   aria-controls={`${category}-menu`}
-                   role="button"
-                   tabIndex={0}
-                   onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') handleToggleGroup(category)}}
+              <div
+                className="mb-2 flex items-center justify-between cursor-pointer select-none"
+                onClick={() => handleToggleGroup(category)}
+                aria-expanded={openGroups[category]}
+                aria-controls={`${category}-menu`}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") handleToggleGroup(category);
+                }}
               >
                 <p className="text-xs font-bold text-blue-700/80 uppercase tracking-wider px-2">
                   {categoryLabels[category]}
                 </p>
                 <FaChevronDown
-                  className={`text-blue-700 transition-transform duration-300 mr-2 ${openGroups[category] ? "rotate-0" : "-rotate-90"}`}
+                  className={`text-blue-700 transition-transform duration-300 mr-2 ${
+                    openGroups[category] ? "rotate-0" : "-rotate-90"
+                  }`}
                   aria-hidden="true"
                 />
               </div>
             )}
 
-            {/* Thu gọn nhóm nếu isCollapsed false */}
             {(!isCollapsed && openGroups[category]) && (
               <div id={`${category}-menu`} className="space-y-1" role="region" aria-label={categoryLabels[category]}>
                 {items.map((item) => {
@@ -224,8 +245,6 @@ const Sidebar = () => {
               </div>
             )}
 
-            {/* Nếu isCollapsed = true thì luôn show tất cả item
-                (Không ẩn menu item khi sidebar bị thu nhỏ) */}
             {isCollapsed && (
               <div className="space-y-1" role="region" aria-label={categoryLabels[category]}>
                 {items.map((item) => {
@@ -273,33 +292,6 @@ const Sidebar = () => {
           </div>
         ))}
       </nav>
-
-      {/* Stats Mini Cards */}
-      {!isCollapsed && (
-        <div className="p-4 border-t border-blue-400/30 bg-[#d0e2ff]">
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white p-5 rounded-2xl shadow-md border border-gray-200 flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center shadow">
-                <FaBicycle className="text-blue-600 text-2xl" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-900 font-medium mb-1">Xe Hoạt Động</p>
-                <p className="text-lg font-bold text-blue-900">8/9</p>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl shadow-md border border-gray-200 flex items-center space-x-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center shadow">
-                <FaUser className="text-green-600 text-2xl" />
-              </div>
-              <div>
-                <p className="text-sm text-green-900 font-medium mb-1">Người Dùng</p>
-                <p className="text-lg font-bold text-green-900">24</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Logout Button */}
       <div className="p-4 border-t border-blue-400/30">

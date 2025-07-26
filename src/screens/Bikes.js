@@ -11,8 +11,10 @@ import {
   RefreshCw,
   Download,
 } from "lucide-react";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { ref, onValue, set, update, remove } from "firebase/database";
+import { onAuthStateChanged } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function BikesManagement() {
   // Danh sách bike realtime
@@ -47,10 +49,36 @@ export default function BikesManagement() {
     currentUserId: "none",
   });
 
-  // Load dữ liệu realtime bikes
+  // Trạng thái kiểm tra auth đã xong chưa
+  const [authChecked, setAuthChecked] = useState(false);
+
+  const navigate = useNavigate();
+
+  /* *************************************************************
+   * IMPORTANT FIX:
+   * Call all hooks unconditionally at the top level.
+   * Do NOT call `useEffect` inside any conditional or after return.
+   * If you want conditional logic, put it *inside* the effect.
+   **************************************************************/
+
+  // Kiểm tra trạng thái đăng nhập Firebase
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigate("/login", { replace: true });
+      } else {
+        setAuthChecked(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  // Chỉ load dữ liệu khi đã xác định đăng nhập
+  useEffect(() => {
+    if (!authChecked) return; // bail early if not authed
+
     const bikesRef = ref(db, "bikes");
-    const unsubscribe = onValue(bikesRef, (snapshot) => {
+    const unsubscribeBikes = onValue(bikesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const bikeList = Object.entries(data).map(([id, bike]) => ({
@@ -62,13 +90,9 @@ export default function BikesManagement() {
         setBikes([]);
       }
     });
-    return () => unsubscribe();
-  }, []);
 
-  // Load dữ liệu realtime locks
-  useEffect(() => {
     const locksRef = ref(db, "locks");
-    const unsubscribe = onValue(locksRef, (snapshot) => {
+    const unsubscribeLocks = onValue(locksRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const lockList = Object.entries(data).map(([id, lock]) => ({
@@ -80,8 +104,26 @@ export default function BikesManagement() {
         setLocks([]);
       }
     });
-    return () => unsubscribe();
-  }, []);
+
+    return () => {
+      unsubscribeBikes();
+      unsubscribeLocks();
+    };
+  }, [authChecked]);
+
+  // Khi filter hoặc dữ liệu bikes thay đổi, reset trang 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, bikes.length]);
+
+  if (!authChecked) {
+    // Đang kiểm tra auth, hiển thị loading hoặc null để tránh flash UI không mong muốn
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-700">
+        Đang kiểm tra đăng nhập...
+      </div>
+    );
+  }
 
   // Hàm lấy danh sách tất cả lockId hiện có
   const allLockIds = locks.map((lock) => lock.lockId).filter(Boolean);
@@ -162,11 +204,6 @@ export default function BikesManagement() {
     currentPage * itemsPerPage
   );
 
-  // Khi filter hoặc dữ liệu bikes thay đổi, reset trang 1
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filter, bikes.length]);
-
   // Chuyển trang
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
@@ -201,7 +238,6 @@ export default function BikesManagement() {
     );
   };
 
-  // Thêm bike với ID key chính là bikeId
   const handleAddBike = () => {
     if (!newBike.bikeId) {
       alert("Bike ID chưa có!");
@@ -216,7 +252,9 @@ export default function BikesManagement() {
       return;
     }
     if (!lockOptions.includes(newBike.currentLockId)) {
-      alert(`Lock ID ${newBike.currentLockId} đã có xe khác sử dụng hoặc không tồn tại. Vui lòng chọn lock khác.`);
+      alert(
+        `Lock ID ${newBike.currentLockId} đã có xe khác sử dụng hoặc không tồn tại. Vui lòng chọn lock khác.`
+      );
       return;
     }
     if (currentBikeIds.includes(newBike.bikeId)) {
@@ -233,7 +271,6 @@ export default function BikesManagement() {
       .catch((e) => alert("Error adding bike: " + e.message));
   };
 
-  // Các hàm chỉnh sửa bike
   const handleEditClick = (bike) => {
     setEditBikeId(bike.id);
     setEditBikeData({ ...bike });
@@ -255,14 +292,12 @@ export default function BikesManagement() {
       .catch((e) => alert("Error updating bike: " + e.message));
   };
 
-  // Xóa bike
   const handleDelete = (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa bike này?")) return;
     const bikeRef = ref(db, `bikes/${id}`);
     remove(bikeRef).catch((e) => alert("Error deleting bike: " + e.message));
   };
 
-  // Xem chi tiết bike
   const handleView = (bike) => {
     alert(
       `View bike:\nID: ${bike.bikeId}\nStatus: ${bike.status}\nLock: ${bike.currentLockId}\nUser: ${bike.currentUserId}`
@@ -454,13 +489,11 @@ export default function BikesManagement() {
           </div>
         </div>
 
-        {/* Bảng hiển thị bikes */}
+        {/* Bikes Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Bikes ({filteredBikes.length})
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Bikes ({filteredBikes.length})</h3>
               <div className="text-sm text-gray-500">
                 Showing {currentBikes.length} of {filteredBikes.length} bikes (Page {currentPage} of {totalPages})
               </div>
@@ -489,152 +522,136 @@ export default function BikesManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentBikes.length === 0 && (
+                {currentBikes.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-12 text-gray-500">
                       <Bike className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                      Không có dữ liệu phù hợp
+                      No matching bikes found
                       <br />
-                      <span className="text-gray-400 text-sm">
-                        Thử điều chỉnh bộ lọc để xem thêm kết quả
-                      </span>
+                      <span className="text-gray-400 text-sm">Try adjusting filters to see more results</span>
                     </td>
                   </tr>
-                )}
-                {currentBikes.map((bike) =>
-                  editBikeId === bike.id ? (
-                    <tr
-                      key={bike.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-2 py-2">
-                        <div className="text-gray-600 select-none">{bike.bikeId}</div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <select
-                          className="w-full border rounded px-2 py-1"
-                          value={editBikeData.status}
-                          onChange={(e) =>
-                            setEditBikeData({ ...editBikeData, status: e.target.value })
-                          }
-                        >
-                          <option value="locked">Locked</option>
-                          <option value="unlocked">Unlocked</option>
-                        </select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <select
-                          className="w-full border rounded px-2 py-1"
-                          value={editBikeData.currentLockId}
-                          onChange={(e) =>
-                            setEditBikeData({ ...editBikeData, currentLockId: e.target.value })
-                          }
-                        >
-                          <option value="">None</option>
-                          {lockOptions.map((id) => (
-                            <option key={id} value={id}>
-                              {id}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="text"
-                          className="w-full border rounded px-2 py-1"
-                          value={editBikeData.currentUserId}
-                          onChange={(e) =>
-                            setEditBikeData({ ...editBikeData, currentUserId: e.target.value })
-                          }
-                        />
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="text-blue-600 hover:underline mr-2"
-                          title="Lưu"
-                        >
-                          💾
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="text-gray-600 hover:underline"
-                          title="Huỷ"
-                        >
-                          ❌
-                        </button>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr
-                      key={bike.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-purple-100 rounded-lg mr-3">
-                            <span className="text-purple-600">
-                              {getGenderIcon(bike.gender)}
+                ) : (
+                  currentBikes.map((bike) =>
+                    editBikeId === bike.id ? (
+                      <tr key={bike.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-2 py-2">
+                          <div className="text-gray-600 select-none">{bike.bikeId}</div>
+                        </td>
+                        <td className="px-2 py-2">
+                          <select
+                            className="w-full border rounded px-2 py-1"
+                            value={editBikeData.status}
+                            onChange={(e) => setEditBikeData({ ...editBikeData, status: e.target.value })}
+                          >
+                            <option value="locked">Locked</option>
+                            <option value="unlocked">Unlocked</option>
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <select
+                            className="w-full border rounded px-2 py-1"
+                            value={editBikeData.currentLockId}
+                            onChange={(e) => setEditBikeData({ ...editBikeData, currentLockId: e.target.value })}
+                          >
+                            <option value="">None</option>
+                            {lockOptions.map((id) => (
+                              <option key={id} value={id}>
+                                {id}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <input
+                            type="text"
+                            className="w-full border rounded px-2 py-1"
+                            value={editBikeData.currentUserId}
+                            onChange={(e) => setEditBikeData({ ...editBikeData, currentUserId: e.target.value })}
+                          />
+                        </td>
+                        <td className="px-2 py-2 whitespace-nowrap">
+                          <button
+                            onClick={handleSaveEdit}
+                            className="text-blue-600 hover:underline mr-2"
+                            title="Lưu"
+                          >
+                            💾
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="text-gray-600 hover:underline"
+                            title="Huỷ"
+                          >
+                            ❌
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={bike.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="p-2 bg-purple-100 rounded-lg mr-3">
+                              <span className="text-purple-600">{getGenderIcon(bike.gender)}</span>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{bike.name || "N/A"}</div>
+                              <div className="text-sm text-gray-500">ID: {bike.bikeId}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(bike.status)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Lock className="w-4 h-4 text-gray-400 mr-2" />
+                            <span className="text-sm text-gray-900">{bike.currentLockId || "None"}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <User className="w-4 h-4 text-gray-400 mr-2" />
+                            <span
+                              className={`text-sm ${
+                                bike.currentUserId === "none" ? "text-gray-500 italic" : "text-gray-900"
+                              }`}
+                            >
+                              {bike.currentUserId}
                             </span>
                           </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{bike.name || "N/A"}</div>
-                            <div className="text-sm text-gray-500">ID: {bike.bikeId}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                              title="View"
+                              onClick={() => handleView(bike)}
+                            >
+                              👁️
+                            </button>
+                            <button
+                              className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                              title="Edit"
+                              onClick={() => handleEditClick(bike)}
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                              title="Delete"
+                              onClick={() => handleDelete(bike.id)}
+                            >
+                              🗑️
+                            </button>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(bike.status)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Lock className="w-4 h-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{bike.currentLockId || "None"}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <User className="w-4 h-4 text-gray-400 mr-2" />
-                          <span
-                            className={`text-sm ${
-                              bike.currentUserId === "none" ? "text-gray-500 italic" : "text-gray-900"
-                            }`}
-                          >
-                            {bike.currentUserId}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="View"
-                            onClick={() => handleView(bike)}
-                          >
-                            👁️
-                          </button>
-                          <button
-                            className="p-1.5 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
-                            title="Edit"
-                            onClick={() => handleEditClick(bike)}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Delete"
-                            onClick={() => handleDelete(bike.id)}
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    ),
                   )
                 )}
               </tbody>
             </table>
           </div>
-
-          {/* Pagination */}
+          {/* Phân trang */}
           {totalPages > 1 && (
             <div className="px-6 py-3 border-t border-gray-200 flex justify-center space-x-3">
               <button
