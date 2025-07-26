@@ -4,6 +4,7 @@ import { ref, onValue, update, remove, push } from "firebase/database";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
+  const [bikes, setBikes] = useState([]);
   const [search, setSearch] = useState({
     userId: "",
     email: "",
@@ -11,6 +12,7 @@ export default function Users() {
     age: "",
     gender: "",
     selectedBikeId: "",
+    role: "",
   });
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -20,9 +22,12 @@ export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  // Kiểm tra có admin trong users để hiện cột Role
+  const hasAdmin = users.some((u) => u.role === "admin");
+
   useEffect(() => {
     const usersRef = ref(db, "users");
-    const unsubscribe = onValue(usersRef, (snapshot) => {
+    const unsubscribeUsers = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const userList = Object.entries(data).map(([id, user]) => ({ id, ...user }));
@@ -31,10 +36,25 @@ export default function Users() {
         setUsers([]);
       }
     });
-    return () => unsubscribe();
+
+    const bikesRef = ref(db, "bikes");
+    const unsubscribeBikes = onValue(bikesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Đảm bảo bikeId không null, nếu null thì lấy key
+        const bikeList = Object.entries(data).map(([key, bike]) => bike.bikeId || key);
+        setBikes(bikeList);
+      } else {
+        setBikes([]);
+      }
+    });
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeBikes();
+    };
   }, []);
 
-  // Chuẩn hóa gender để lọc không phân biệt hoa thường
   const normalizeGender = (g) => {
     if (!g) return "";
     const lower = g.toLowerCase();
@@ -43,7 +63,6 @@ export default function Users() {
     return lower;
   };
 
-  // Filter users theo search với chuẩn hóa gender
   const filteredUsers = users.filter((u) =>
     Object.keys(search).every((key) => {
       const userValue = (u[key] || "").toString().toLowerCase();
@@ -55,11 +74,14 @@ export default function Users() {
       }
 
       if (key === "selectedBikeId") {
-        return searchValue === ""
-          ? true
-          : searchValue === "none"
-          ? userValue === "" || userValue === "none"
-          : userValue === searchValue;
+        if (searchValue === "") return true;
+        if (searchValue === "none") return userValue === "none";
+        return userValue === searchValue;
+      }
+
+      if (key === "role") {
+        if (!searchValue) return true;
+        return userValue === searchValue;
       }
 
       return userValue.includes(searchValue);
@@ -68,20 +90,17 @@ export default function Users() {
 
   const searchString = JSON.stringify(search);
 
-  // Khi filter thay đổi, reset trang về 1
   useEffect(() => {
     setCurrentPage(1);
   }, [searchString]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
-  // Lấy users của trang hiện tại
   const currentUsers = filteredUsers.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Chuyển trang
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
@@ -95,6 +114,7 @@ export default function Users() {
       age: "",
       gender: "",
       selectedBikeId: "",
+      role: "",
     });
   };
 
@@ -139,7 +159,11 @@ export default function Users() {
         name: editedUser.name || "",
         age: editedUser.age || "",
         gender: editedUser.gender || "",
-        selectedBikeId: editedUser.selectedBikeId || "none",
+        selectedBikeId:
+          !editedUser.selectedBikeId || editedUser.selectedBikeId === "none"
+            ? "none"
+            : editedUser.selectedBikeId,
+        role: editedUser.role === "admin" ? "admin" : "user",
       };
       await update(userRef, dataToSave);
       setEditingUserId(null);
@@ -161,25 +185,20 @@ export default function Users() {
     }
   };
 
-  // Tách hàm kiểm tra trùng userId ra ngoài vòng lặp
   const isDuplicateUserId = (idToCheck) => users.some((u) => u.userId === idToCheck);
 
-  // Tạo User ID random, tránh trùng với userId hiện tại trong users
   const generateRandomUserId = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let id;
-
     do {
       id = "";
       for (let i = 0; i < 8; i++) {
         id += chars.charAt(Math.floor(Math.random() * chars.length));
       }
     } while (isDuplicateUserId(id));
-
     return id;
   };
 
-  // Form thêm người dùng mới có userId random
   const AddUserFormWithAutoUserId = () => {
     const [formData, setFormData] = useState({
       userId: generateRandomUserId(),
@@ -187,7 +206,8 @@ export default function Users() {
       name: "",
       age: "",
       gender: "",
-      selectedBikeId: "none",
+      selectedBikeId: "none", // mặc định none, không chọn được
+      role: "user", // mặc định role user
     });
 
     const resetForm = () => {
@@ -198,6 +218,7 @@ export default function Users() {
         age: "",
         gender: "",
         selectedBikeId: "none",
+        role: "user",
       });
     };
 
@@ -209,7 +230,12 @@ export default function Users() {
       }
       try {
         const usersRef = ref(db, "users");
-        await push(usersRef, formData);
+        const preparedData = {
+          ...formData,
+          selectedBikeId: "none",
+          role: formData.role === "admin" ? "admin" : "user",
+        };
+        await push(usersRef, preparedData);
         alert("Thêm user thành công!");
         resetForm();
         setShowAddForm(false);
@@ -272,22 +298,26 @@ export default function Users() {
             <option value="female">Nữ</option>
           </select>
         </div>
+        {/* Disabled selectedBikeId */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Selected Bike</label>
           <select
-            value={formData.selectedBikeId}
-            onChange={(e) => setFormData({ ...formData, selectedBikeId: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            disabled
+            value="none"
+            className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
           >
             <option value="none">Không có xe</option>
-            {Array.from({ length: 9 }).map((_, i) => {
-              const bikeId = `bike${i + 1}`;
-              return (
-                <option key={bikeId} value={bikeId}>
-                  {bikeId}
-                </option>
-              );
-            })}
+          </select>
+        </div>
+        <div>
+          <label className="block text-gray-700 font-medium mb-1">Role</label>
+          <select
+            value={formData.role}
+            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+            className="w-full border border-gray-300 rounded px-3 py-2"
+          >
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
           </select>
         </div>
         <div className="flex justify-end space-x-2">
@@ -372,7 +402,9 @@ export default function Users() {
               <div>
                 <p className="text-sm font-medium text-gray-600">With Bikes</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {users.filter((u) => u.selectedBikeId && u.selectedBikeId !== "none").length}
+                  {users.filter(
+                    (u) => u.selectedBikeId && u.selectedBikeId !== "none"
+                  ).length}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -423,7 +455,7 @@ export default function Users() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">User ID</label>
               <input
@@ -483,16 +515,27 @@ export default function Users() {
               >
                 <option value="">All Bikes</option>
                 <option value="none">None</option>
-                {Array.from({ length: 9 }).map((_, i) => {
-                  const bikeId = `bike${i + 1}`;
-                  return (
-                    <option key={bikeId} value={bikeId}>
-                      {bikeId}
-                    </option>
-                  );
-                })}
+                {bikes.map((bikeId, index) => (
+                  <option key={bikeId || index} value={bikeId}>
+                    {bikeId}
+                  </option>
+                ))}
               </select>
             </div>
+            {hasAdmin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  value={search.role || ""}
+                  onChange={(e) => setSearch({ ...search, role: e.target.value })}
+                >
+                  <option value="">All Roles</option>
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -515,93 +558,106 @@ export default function Users() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bike Status</th>
+                  {hasAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentUsers.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-gray-500">
+                    <td colSpan={hasAdmin ? 6 : 5} className="text-center py-12 text-gray-500">
                       No matching users found.
                     </td>
                   </tr>
                 )}
-                {currentUsers.map((user) =>
-                  editingUserId === user.id ? (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      {/* Editable row */}
-                      <td className="px-2 py-2">
-                        <div className="text-gray-600 select-none">{user.userId}</div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <input
-                          type="email"
-                          className="w-full border rounded px-2 py-1"
-                          value={editedUser.email || ""}
-                          onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-2 py-2 space-y-1">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500">Age</label>
+                {currentUsers.map((user) => {
+                  if (editingUserId === user.id) {
+                    return (
+                      <tr key={`edit-${user.id}`} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-2 py-2">
+                          <div className="text-gray-600 select-none">{user.userId}</div>
+                        </td>
+                        <td className="px-2 py-2">
                           <input
-                            type="number"
-                            min={0}
+                            type="email"
                             className="w-full border rounded px-2 py-1"
-                            value={editedUser.age || ""}
-                            onChange={(e) => setEditedUser({ ...editedUser, age: e.target.value })}
+                            value={editedUser.email || ""}
+                            onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
                           />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-500">Gender</label>
+                        </td>
+                        <td className="px-2 py-2 space-y-1">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500">Age</label>
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-full border rounded px-2 py-1"
+                              value={editedUser.age || ""}
+                              onChange={(e) => setEditedUser({ ...editedUser, age: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500">Gender</label>
+                            <select
+                              className="w-full border rounded px-2 py-1"
+                              value={editedUser.gender || ""}
+                              onChange={(e) => setEditedUser({ ...editedUser, gender: e.target.value })}
+                            >
+                              <option value="">Chọn giới tính</option>
+                              <option value="male">Nam</option>
+                              <option value="female">Nữ</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2">
                           <select
                             className="w-full border rounded px-2 py-1"
-                            value={editedUser.gender || ""}
-                            onChange={(e) => setEditedUser({ ...editedUser, gender: e.target.value })}
+                            value={editedUser.selectedBikeId || "none"}
+                            onChange={(e) => setEditedUser({ ...editedUser, selectedBikeId: e.target.value })}
                           >
-                            <option value="">Chọn giới tính</option>
-                            <option value="male">Nam</option>
-                            <option value="female">Nữ</option>
-                          </select>
-                        </div>
-                      </td>
-                      <td className="px-2 py-2">
-                        <select
-                          className="w-full border rounded px-2 py-1"
-                          value={editedUser.selectedBikeId || "none"}
-                          onChange={(e) => setEditedUser({ ...editedUser, selectedBikeId: e.target.value })}
-                        >
-                          <option value="none">Không có xe</option>
-                          {Array.from({ length: 9 }).map((_, i) => {
-                            const bikeId = `bike${i + 1}`;
-                            return (
-                              <option key={bikeId} value={bikeId}>
+                            <option value="none">Không có xe</option>
+                            {bikes.map((bikeId, index) => (
+                              <option key={bikeId || index} value={bikeId}>
                                 {bikeId}
                               </option>
-                            );
-                          })}
-                        </select>
-                      </td>
-                      <td className="px-2 py-2 whitespace-nowrap">
-                        <button
-                          onClick={saveUser}
-                          className="text-blue-600 hover:underline mr-2"
-                          title="Lưu"
-                        >
-                          💾
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          className="text-gray-600 hover:underline"
-                          title="Huỷ"
-                        >
-                          ❌
-                        </button>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                      {/* Normal row */}
+                            ))}
+                          </select>
+                        </td>
+                        {hasAdmin && (
+                          <td className="px-2 py-2">
+                            <select
+                              className="w-full border rounded px-2 py-1"
+                              value={editedUser.role || "user"}
+                              onChange={(e) => setEditedUser({ ...editedUser, role: e.target.value })}
+                            >
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </td>
+                        )}
+                        <td className="px-2 py-2 whitespace-nowrap">
+                          <button
+                            onClick={saveUser}
+                            className="text-blue-600 hover:underline mr-2"
+                            title="Lưu"
+                          >
+                            💾
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="text-gray-600 hover:underline"
+                            title="Huỷ"
+                          >
+                            ❌
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  return (
+                    <tr key={`view-${user.id}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="p-2 bg-blue-100 rounded-lg mr-3">
@@ -626,6 +682,11 @@ export default function Users() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{getBikeStatus(user.selectedBikeId)}</td>
+                      {hasAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                          {user.role === "admin" ? "Admin" : "User"}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
                           <button
@@ -652,13 +713,12 @@ export default function Users() {
                         </div>
                       </td>
                     </tr>
-                  )
-                )}
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="px-6 py-3 border-t border-gray-200 flex justify-center space-x-3">
               <button

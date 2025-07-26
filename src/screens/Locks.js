@@ -19,7 +19,7 @@ export default function LocksManagement() {
   const [filter, setFilter] = useState({
     lockId: "",
     status: "",
-    currentUserId: "",
+    bikeId: "",
   });
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -29,8 +29,8 @@ export default function LocksManagement() {
 
   const [newLock, setNewLock] = useState({
     lockId: "",
-    status: "available",
-    currentUserId: "none",
+    status: "Khóa Mở", // Mặc định khóa mở khi thêm mới
+    bikeId: "",
     isValid: false,
     occupied: false,
     otp: "",
@@ -57,7 +57,6 @@ export default function LocksManagement() {
 
   useEffect(() => {
     if (!authChecked) return;
-
     const locksRef = ref(db, "locks");
     const unsubscribe = onValue(locksRef, (snapshot) => {
       const data = snapshot.val();
@@ -71,7 +70,6 @@ export default function LocksManagement() {
         setLocks([]);
       }
     });
-
     return () => unsubscribe();
   }, [authChecked]);
 
@@ -79,15 +77,15 @@ export default function LocksManagement() {
     setCurrentPage(1);
   }, [filter, locks.length]);
 
-  if (!authChecked) {
+  if (!authChecked)
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-700">
         Đang kiểm tra đăng nhập...
       </div>
     );
-  }
 
   const currentLockIds = locks.map((l) => l.lockId);
+
   const getMaxLockNumber = (locksList) => {
     let max = 0;
     locksList.forEach(({ lockId }) => {
@@ -98,6 +96,7 @@ export default function LocksManagement() {
     });
     return max;
   };
+
   const createNewLockId = () => {
     const maxNum = getMaxLockNumber(locks);
     let candidate = `lock${maxNum + 1}`;
@@ -112,8 +111,8 @@ export default function LocksManagement() {
   const resetNewLockForm = () => {
     setNewLock({
       lockId: createNewLockId(),
-      status: "available",
-      currentUserId: "none",
+      status: "Khóa Mở",
+      bikeId: "",
       isValid: false,
       occupied: false,
       otp: "",
@@ -129,11 +128,18 @@ export default function LocksManagement() {
 
   const filteredLocks = locks.filter((lock) => {
     const matchLockId = filter.lockId === "" || lock.lockId === filter.lockId;
-    const matchStatus = filter.status === "" || lock.status === filter.status;
-    const inputUser = filter.currentUserId.trim().toLowerCase();
-    const lockUser = (lock.currentUserId || "none").toLowerCase();
-    const matchUser = inputUser === "" || lockUser.includes(inputUser);
-    return matchLockId && matchStatus && matchUser;
+
+    // Viết hoa "Có Xe" để đồng bộ
+    const lockStatus =
+      lock.isValid && lock.occupied ? "Có Xe, Khóa Đóng" : "Khóa Mở";
+
+    const matchStatus = filter.status === "" || lockStatus === filter.status;
+
+    const inputBikeId = filter.bikeId.trim().toLowerCase();
+    const bikeIdInLock = (lock.bikeId || "").toLowerCase();
+    const matchBikeId = inputBikeId === "" || bikeIdInLock.includes(inputBikeId);
+
+    return matchLockId && matchStatus && matchBikeId;
   });
 
   const totalPages = Math.ceil(filteredLocks.length / itemsPerPage);
@@ -141,37 +147,32 @@ export default function LocksManagement() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
   const goToPage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   };
 
   const clearFilters = () => {
-    setFilter({ lockId: "", status: "", currentUserId: "" });
+    setFilter({ lockId: "", status: "", bikeId: "" });
   };
 
-  const getStatusBadge = (status) => {
-    if (status === "available") {
+  const getStatusBadge = (lock) => {
+    if (lock.isValid && lock.occupied) {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Available
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <XCircle className="w-3 h-3 mr-1" />
+          Có Xe, Khóa Đóng
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-        <XCircle className="w-3 h-3 mr-1" />
-        In Use
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <CheckCircle className="w-3 h-3 mr-1" />
+        Khóa Mở
       </span>
     );
   };
-
-  // --- Phần Stat Cards ---
-  const totalLocks = locks.length;
-  const availableLocks = locks.filter((l) => l.status === "available").length;
-  const inUseLocks = locks.filter((l) => l.status === "in-use").length;
-  const occupiedLocks = locks.filter((l) => !!l.occupied).length;
 
   const handleAddLock = () => {
     if (!newLock.lockId) {
@@ -183,8 +184,19 @@ export default function LocksManagement() {
       return;
     }
 
+    const lockToAdd = {
+      lockId: newLock.lockId,
+      status: "Khóa Mở",
+      bikeId: newLock.bikeId,
+      isValid: false,
+      occupied: false,
+      otp: "",
+      otpTimestamp: 0,
+      returnBikeId: "",
+    };
+
     const lockRef = ref(db, `locks/${newLock.lockId}`);
-    set(lockRef, newLock)
+    set(lockRef, lockToAdd)
       .then(() => {
         setShowAddForm(false);
         resetNewLockForm();
@@ -204,8 +216,14 @@ export default function LocksManagement() {
 
   const handleSaveEdit = () => {
     if (!editLockId) return;
+
+    const status =
+      editLockData.isValid && editLockData.occupied
+        ? "Có Xe, Khóa Đóng"
+        : "Khóa Mở";
+
     const lockRef = ref(db, `locks/${editLockId}`);
-    update(lockRef, editLockData)
+    update(lockRef, { ...editLockData, status })
       .then(() => {
         setEditLockId(null);
         setEditLockData({});
@@ -223,14 +241,12 @@ export default function LocksManagement() {
     alert(
       `Chi tiết khóa:
 ID: ${lock.lockId}
-Trạng thái: ${lock.status}
-Người dùng hiện tại: ${lock.currentUserId}
+Trạng thái: ${lock.isValid && lock.occupied ? "Có Xe, Khóa Đóng" : "Khóa Mở"}
+Bike ID: ${lock.bikeId || "-"}
 Is Valid: ${lock.isValid ? "Yes" : "No"}
 Occupied: ${lock.occupied ? "Yes" : "No"}
 OTP: ${lock.otp || "-"}
-OTP Timestamp: ${
-        lock.otpTimestamp ? new Date(lock.otpTimestamp).toLocaleString() : "-"
-      }
+OTP Timestamp: ${lock.otpTimestamp ? new Date(lock.otpTimestamp).toLocaleString() : "-"}
 Return Bike ID: ${lock.returnBikeId || "-"}`
     );
   };
@@ -268,31 +284,31 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <StatCard
             title="Total Locks"
-            value={totalLocks}
+            value={locks.length}
             icon={<Key className="w-6 h-6 text-blue-600" />}
             bg="bg-blue-100"
           />
           <StatCard
-            title="Available"
-            value={availableLocks}
-            icon={<CheckCircle className="w-6 h-6 text-green-600" />}
-            bg="bg-green-100"
-          />
-          <StatCard
-            title="In Use"
-            value={inUseLocks}
+            title="Có Xe, Khóa Đóng"
+            value={locks.filter((l) => l.isValid && l.occupied).length}
             icon={<XCircle className="w-6 h-6 text-red-600" />}
             bg="bg-red-100"
           />
           <StatCard
+            title="Khóa Mở"
+            value={locks.filter((l) => !(l.isValid && l.occupied)).length}
+            icon={<CheckCircle className="w-6 h-6 text-green-600" />}
+            bg="bg-green-100"
+          />
+          <StatCard
             title="Occupied"
-            value={occupiedLocks}
+            value={locks.filter((l) => !!l.occupied).length}
             icon={<XCircle className="w-6 h-6 text-purple-600" />}
             bg="bg-purple-100"
           />
         </div>
 
-        {/* Form thêm khóa */}
+        {/* Add lock form */}
         {showAddForm && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -305,7 +321,8 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Chỉ nhập Lock ID */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lock ID</label>
                 <input
@@ -315,23 +332,25 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                   className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
                 />
               </div>
+
+              {/* Thêm nhập bikeId khi thêm mới nếu cần */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select
-                  value={newLock.status}
-                  onChange={(e) => setNewLock({ ...newLock, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                >
-                  <option value="available">Available</option>
-                  <option value="in-use">In Use</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bike ID</label>
+                <input
+                  type="text"
+                  value={newLock.bikeId}
+                  onChange={(e) => setNewLock({ ...newLock, bikeId: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  placeholder="Nhập Bike ID (nếu có)"
+                />
               </div>
+
               <div className="flex items-end">
                 <button
                   onClick={handleAddLock}
                   className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Add Lock
+                  Thêm Khóa
                 </button>
               </div>
             </div>
@@ -353,7 +372,7 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
               Clear
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Lock ID</label>
               <select
@@ -377,20 +396,20 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                 onChange={(e) => setFilter({ ...filter, status: e.target.value })}
               >
                 <option value="">All</option>
-                <option value="available">Available</option>
-                <option value="in-use">In Use</option>
+                <option value="Có Xe, Khóa Đóng">Có Xe, Khóa Đóng</option>
+                <option value="Khóa Mở">Khóa Mở</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Current User</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bike ID</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  placeholder="Search User ID or 'none'"
-                  value={filter.currentUserId}
-                  onChange={(e) => setFilter({ ...filter, currentUserId: e.target.value })}
+                  placeholder="Search Bike ID"
+                  value={filter.bikeId}
+                  onChange={(e) => setFilter({ ...filter, bikeId: e.target.value })}
                 />
               </div>
             </div>
@@ -416,7 +435,7 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lock ID</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current User</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bike ID</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Is Valid</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Occupied</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">OTP</th>
@@ -437,21 +456,12 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                     editLockId === lock.id ? (
                       <tr key={lock.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 py-2 whitespace-nowrap">{lock.lockId}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          <select
-                            value={editLockData.status}
-                            onChange={(e) => setEditLockData({ ...editLockData, status: e.target.value })}
-                            className="border rounded px-2 py-1 w-full"
-                          >
-                            <option value="available">Available</option>
-                            <option value="in-use">In Use</option>
-                          </select>
-                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{getStatusBadge(lock)}</td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           <input
                             type="text"
-                            value={editLockData.currentUserId}
-                            onChange={(e) => setEditLockData({ ...editLockData, currentUserId: e.target.value })}
+                            value={editLockData.bikeId || ""}
+                            onChange={(e) => setEditLockData({ ...editLockData, bikeId: e.target.value })}
                             className="border rounded px-2 py-1 w-full"
                           />
                         </td>
@@ -513,8 +523,8 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                     ) : (
                       <tr key={lock.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-3 py-2 whitespace-nowrap">{lock.lockId}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{getStatusBadge(lock.status)}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{lock.currentUserId}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{getStatusBadge(lock)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{lock.bikeId || "-"}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-center">{lock.isValid ? "Yes" : "No"}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-center">{lock.occupied ? "Yes" : "No"}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{lock.otp || "-"}</td>
@@ -593,7 +603,6 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
   );
 }
 
-// Component thống kê nhỏ gọn (copy từ bike)
 function StatCard({ title, value, icon, bg }) {
   return (
     <div className={`bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-center justify-between`}>
