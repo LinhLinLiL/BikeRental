@@ -76,6 +76,7 @@ export default function EditableBikeRow({ bike }) {
           </td>
         </>
       )}
+    
     </tr>
   );
 }

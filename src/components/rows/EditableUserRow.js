@@ -1,4 +1,3 @@
-// 📁 src/components/rows/EditableUserRow.jsx
 import React, { useState } from "react";
 import { ref, update, remove } from "firebase/database";
 import { db } from "../../firebase";
@@ -34,26 +33,68 @@ export default function EditableUserRow({ user }) {
       {editing ? (
         <>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.userId} onChange={(e) => setEditedUser({ ...editedUser, userId: e.target.value })} />
+            <input
+              className="border p-1 w-full rounded"
+              value={editedUser.userId}
+              onChange={(e) => setEditedUser({ ...editedUser, userId: e.target.value })}
+            />
           </td>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.email} onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })} />
+            <input
+              className="border p-1 w-full rounded"
+              value={editedUser.email}
+              onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+              type="email"
+            />
           </td>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.name} onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })} />
+            <input
+              className="border p-1 w-full rounded"
+              value={editedUser.name}
+              onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+            />
           </td>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.age} onChange={(e) => setEditedUser({ ...editedUser, age: e.target.value })} />
+            <input
+              className="border p-1 w-full rounded"
+              value={editedUser.age}
+              onChange={(e) => setEditedUser({ ...editedUser, age: e.target.value })}
+              type="number"
+              min="0"
+            />
           </td>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.gender} onChange={(e) => setEditedUser({ ...editedUser, gender: e.target.value })} />
+            <select
+              className="border p-1 w-full rounded"
+              value={editedUser.gender || ""}
+              onChange={(e) => setEditedUser({ ...editedUser, gender: e.target.value })}
+            >
+              <option value="">Chọn giới tính</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+            </select>
           </td>
           <td className="p-2">
-            <input className="border p-1 w-full" value={editedUser.selectedBikeId} onChange={(e) => setEditedUser({ ...editedUser, selectedBikeId: e.target.value })} />
+            <select
+              className="border p-1 w-full rounded"
+              value={editedUser.selectedBikeId || "none"}
+              onChange={(e) => setEditedUser({ ...editedUser, selectedBikeId: e.target.value })}
+            >
+              <option value="none">Không có xe</option>
+              {Array.from({ length: 9 }, (_, i) => (
+                <option key={i} value={`bike${i + 1}`}>
+                  bike{i + 1}
+                </option>
+              ))}
+            </select>
           </td>
           <td className="p-2 flex gap-2">
-            <button onClick={handleSave} className="text-green-600 hover:underline text-sm">Lưu</button>
-            <button onClick={() => setEditing(false)} className="text-gray-500 hover:underline text-sm">Huỷ</button>
+            <button onClick={handleSave} className="text-green-600 hover:underline text-sm">
+              Lưu
+            </button>
+            <button onClick={() => setEditing(false)} className="text-gray-500 hover:underline text-sm">
+              Huỷ
+            </button>
           </td>
         </>
       ) : (
@@ -62,11 +103,15 @@ export default function EditableUserRow({ user }) {
           <td className="p-2">{user.email}</td>
           <td className="p-2">{user.name || "-"}</td>
           <td className="p-2">{user.age || "-"}</td>
-          <td className="p-2">{user.gender || "-"}</td>
-          <td className="p-2">{user.selectedBikeId || "None"}</td>
+          <td className="p-2 capitalize">{user.gender || "-"}</td>
+          <td className="p-2">{user.selectedBikeId || "none"}</td>
           <td className="p-2 flex gap-2">
-            <button onClick={() => setEditing(true)} className="text-blue-600 hover:underline text-sm">Sửa</button>
-            <button onClick={handleDelete} className="text-red-600 hover:underline text-sm">Xoá</button>
+            <button onClick={() => setEditing(true)} className="text-blue-600 hover:underline text-sm" title="Sửa">
+              ✏️
+            </button>
+            <button onClick={handleDelete} className="text-red-600 hover:underline text-sm" title="Xoá">
+              🗑️
+            </button>
           </td>
         </>
       )}
