@@ -1,46 +1,27 @@
-import { useEffect, useState } from "react";
-import { db, auth } from "../firebase";
+import React, { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
+import { db } from "../firebase";
 import {
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
+  Tooltip,
   Legend,
   AreaChart,
   Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  BarChart,
+  Bar,
+  Cell,
 } from "recharts";
-import { onAuthStateChanged } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
 
 export default function StationStats() {
   const [stations, setStations] = useState([]);
-  const [authChecked, setAuthChecked] = useState(false);
 
-  const navigate = useNavigate();
-
-  // Kiểm tra đăng nhập Firebase Auth
+  // Lấy data realtime từ Firebase
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        navigate("/login", { replace: true });
-      } else {
-        setAuthChecked(true);
-      }
-    });
-    return () => unsubscribe();
-  }, [navigate]);
-
-  // Chỉ load dữ liệu khi đã xác thực
-  useEffect(() => {
-    if (!authChecked) return;
-
     const statisticsRef = ref(db, "statistics");
     const unsubscribe = onValue(statisticsRef, (snapshot) => {
       const data = snapshot.val();
@@ -56,18 +37,8 @@ export default function StationStats() {
         setStations([]);
       }
     });
-
     return () => unsubscribe();
-  }, [authChecked]);
-
-  if (!authChecked) {
-    // Đang chờ xác thực đăng nhập
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-700">
-        Đang kiểm tra đăng nhập...
-      </div>
-    );
-  }
+  }, []);
 
   // Tổng số liệu
   const totalRentals = stations.reduce((sum, s) => sum + s.rentals, 0);
@@ -78,7 +49,8 @@ export default function StationStats() {
       ? ((totalReturns / (totalRentals + totalReturns)) * 100).toFixed(1)
       : 0;
 
-  const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
+  // Card thống kê tổng quan (bỏ trend)
+  const StatCard = ({ title, value, subtitle, icon, color }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between">
         <div>
@@ -88,24 +60,49 @@ export default function StationStats() {
         </div>
         <div className={`text-4xl ${color} opacity-70`}>{icon}</div>
       </div>
-      {trend !== undefined && (
-        <div className="mt-4 flex items-center">
-          <span className={`text-sm ${trend > 0 ? "text-green-500" : "text-red-500"}`}>
-            {trend > 0 ? "↗" : "↘"} {Math.abs(trend)}%
-          </span>
-          <span className="text-xs text-gray-500 ml-2">so với tuần trước</span>
-        </div>
-      )}
     </div>
   );
 
+  // Dữ liệu cho pie chart tổng quan
+  const pieData = [
+    { name: "Thuê xe", value: totalRentals, fill: "#3b82f6" },
+    { name: "Trả xe", value: totalReturns, fill: "#10b981" },
+    { name: "Khẩn cấp", value: totalEmergencies, fill: "#ef4444" },
+  ];
+
+  // Dữ liệu cho biểu đồ xu hướng (hiện dùng stations snapshot, không thực sự là xu hướng theo thời gian)
+  const areaChartData = stations;
+
+  // Dữ liệu cho biểu đồ cột từng trạm
+  const chartData = stations.map((station) => ({
+    name: station.stationId,
+    value: station.rentals + station.returns + station.emergencyReturns,
+    rentals: station.rentals,
+    returns: station.returns,
+    emergencyReturns: station.emergencyReturns,
+    color: "#3b82f6", // có thể customize theo từng loại tùy bạn
+  }));
+
+  // Tổng hoạt động cho footer
+  // const totalActivity = chartData.reduce((acc, cur) => acc + cur.value, 0);
+
+  if (stations.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 text-gray-700">
+        <span className="text-6xl mb-4">🏪</span>
+        <h2 className="text-2xl font-semibold mb-2">Chưa có dữ liệu trạm</h2>
+        <p>Hệ thống đang tải dữ liệu từ các trạm xe đạp...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Thống Kê Trạm Xe Đạp</h1>
         <p className="text-gray-600">Phân tích hiệu suất và sử dụng các trạm xe đạp thông minh</p>
-      </div>
+      </header>
 
       {/* Cards tổng quan */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -115,7 +112,6 @@ export default function StationStats() {
           icon="🚴‍♂️"
           color="text-blue-600"
           subtitle="Tất cả trạm"
-          trend={12}
         />
         <StatCard
           title="Tổng Số Trả"
@@ -123,7 +119,6 @@ export default function StationStats() {
           icon="🔄"
           color="text-green-600"
           subtitle="Hoàn thành"
-          trend={8}
         />
         <StatCard
           title="Trả Khẩn Cấp"
@@ -131,7 +126,6 @@ export default function StationStats() {
           icon="🚨"
           color="text-red-600"
           subtitle="Cần xử lý"
-          trend={-15}
         />
         <StatCard
           title="Tỷ Lệ Sử Dụng"
@@ -139,14 +133,12 @@ export default function StationStats() {
           icon="📊"
           color="text-purple-600"
           subtitle="Hiệu suất trung bình"
-          trend={5}
         />
       </div>
 
-      {/* Biểu đồ tổng quan */}
+      {/* Biểu đồ tổng quan PieChart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Pie chart tổng quan */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-800">Tổng Quan Hệ Thống</h3>
             <div className="flex items-center space-x-2">
@@ -161,17 +153,14 @@ export default function StationStats() {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={[
-                  { name: "Thuê xe", value: totalRentals, fill: "#3b82f6" },
-                  { name: "Trả xe", value: totalReturns, fill: "#10b981" },
-                  { name: "Khẩn cấp", value: totalEmergencies, fill: "#ef4444" },
-                ]}
+                data={pieData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
                 outerRadius={120}
                 paddingAngle={5}
                 dataKey="value"
+                nameKey="name"
               />
               <Tooltip
                 contentStyle={{
@@ -183,19 +172,13 @@ export default function StationStats() {
               <Legend />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </section>
 
-        {/* Area chart xu hướng */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Xu Hướng Theo Trạm</h3>
-            <select className="text-sm border border-gray-300 rounded-lg px-3 py-1">
-              <option>7 ngày qua</option>
-              <option>30 ngày qua</option>
-            </select>
-          </div>
+        {/* Biểu đồ xu hướng hiện tại với data phân phối trạm (không phải thời gian thực) */}
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">Phân phối theo từng trạm</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={stations}>
+            <AreaChart data={areaChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="stationId" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
@@ -204,7 +187,7 @@ export default function StationStats() {
                   backgroundColor: "white",
                   border: "1px solid #e5e7eb",
                   borderRadius: "8px",
-                  fontSize: "14px",
+                  fontSize: 14,
                 }}
               />
               <Area
@@ -223,13 +206,21 @@ export default function StationStats() {
                 fill="#10b981"
                 fillOpacity={0.6}
               />
+              <Area
+                type="monotone"
+                dataKey="emergencyReturns"
+                stackId="1"
+                stroke="#ef4444"
+                fill="#ef4444"
+                fillOpacity={0.6}
+              />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </section>
       </div>
 
       {/* Chi tiết từng trạm */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-gray-800">Chi Tiết Từng Trạm</h3>
           <div className="flex items-center space-x-2">
@@ -239,41 +230,45 @@ export default function StationStats() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {stations.map((station) => {
-            const chartData = [
-              { name: "Thuê", value: station.rentals, color: "#3b82f6" },
-              { name: "Trả", value: station.returns, color: "#10b981" },
-              { name: "Khẩn cấp", value: station.emergencyReturns, color: "#ef4444" },
-            ];
+            // const chartData = [
+            //   { name: "Thuê", value: station.rentals, color: "#3b82f6" },
+            //   { name: "Trả", value: station.returns, color: "#10b981" },
+            //   { name: "Khẩn cấp", value: station.emergencyReturns, color: "#ef4444" },
+            // ];
 
-            const totalActivity = station.rentals + station.returns + station.emergencyReturns;
+            const totalActivity =
+              station.rentals + station.returns + station.emergencyReturns;
+
             const efficiency =
-              station.rentals > 0 ? ((station.returns / station.rentals) * 100).toFixed(1) : 0;
+              station.rentals > 0
+                ? ((station.returns / station.rentals) * 100).toFixed(1)
+                : 0;
 
             return (
-              <div
+              <article
                 key={station.stationId}
                 className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-all duration-300"
               >
                 {/* Header trạm */}
-                <div className="flex items-center justify-between mb-4">
+                <header className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-bold text-gray-800">{station.stationId}</h4>
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                     <span className="text-xs text-gray-500">Hoạt động</span>
                   </div>
-                </div>
+                </header>
 
                 {/* Chỉ số nhanh */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="text-center">
+                <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+                  <div>
                     <p className="text-2xl font-bold text-blue-600">{station.rentals}</p>
                     <p className="text-xs text-gray-500">Thuê xe</p>
                   </div>
-                  <div className="text-center">
+                  <div>
                     <p className="text-2xl font-bold text-green-600">{station.returns}</p>
                     <p className="text-xs text-gray-500">Trả xe</p>
                   </div>
-                  <div className="text-center">
+                  <div>
                     <p className="text-2xl font-bold text-red-600">{station.emergencyReturns}</p>
                     <p className="text-xs text-gray-500">Khẩn cấp</p>
                   </div>
@@ -296,10 +291,7 @@ export default function StationStats() {
                 {/* Biểu đồ cột */}
                 <div className="mt-6">
                   <ResponsiveContainer width="100%" height={200}>
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis
                         dataKey="name"
@@ -318,15 +310,10 @@ export default function StationStats() {
                           backgroundColor: "white",
                           border: "1px solid #e5e7eb",
                           borderRadius: "8px",
-                          fontSize: "14px",
+                          fontSize: 14,
                         }}
                       />
-                      <Bar
-                        dataKey="value"
-                        radius={[4, 4, 0, 0]}
-                        isAnimationActive={true}
-                        animationDuration={1000}
-                      >
+                      <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={1000}>
                         {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
@@ -336,28 +323,17 @@ export default function StationStats() {
                 </div>
 
                 {/* Footer */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>
-                      Tổng hoạt động: <strong>{totalActivity}</strong>
-                    </span>
-                    <span>Cập nhật: {new Date().toLocaleTimeString()}</span>
-                  </div>
-                </div>
-              </div>
+                <footer className="mt-4 pt-4 border-t border-gray-200 flex justify-between text-sm text-gray-600">
+                  <span>
+                    Tổng hoạt động: <strong>{totalActivity}</strong>
+                  </span>
+                  <span>Cập nhật: {new Date().toLocaleTimeString()}</span>
+                </footer>
+              </article>
             );
           })}
         </div>
-
-        {/* Khi không có trạm */}
-        {stations.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🏪</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có dữ liệu trạm</h3>
-            <p className="text-gray-500">Hệ thống đang tải dữ liệu từ các trạm xe đạp...</p>
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

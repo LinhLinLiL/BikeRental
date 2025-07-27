@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { db } from "../firebase";
 import { ref, onValue, update, remove, push } from "firebase/database";
+import {
+  Search,
+  Users as UsersIcon,
+  Bike,
+  X,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -41,7 +49,6 @@ export default function Users() {
     const unsubscribeBikes = onValue(bikesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        // Đảm bảo bikeId không null, nếu null thì lấy key
         const bikeList = Object.entries(data).map(([key, bike]) => bike.bikeId || key);
         setBikes(bikeList);
       } else {
@@ -185,6 +192,7 @@ export default function Users() {
     }
   };
 
+  // Generate random user id for AddUserForm
   const isDuplicateUserId = (idToCheck) => users.some((u) => u.userId === idToCheck);
 
   const generateRandomUserId = () => {
@@ -206,8 +214,8 @@ export default function Users() {
       name: "",
       age: "",
       gender: "",
-      selectedBikeId: "none", // mặc định none, không chọn được
-      role: "user", // mặc định role user
+      selectedBikeId: "none", // disabled
+      role: "user",
     });
 
     const resetForm = () => {
@@ -263,7 +271,7 @@ export default function Users() {
             required
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-600"
           />
         </div>
         <div>
@@ -273,7 +281,7 @@ export default function Users() {
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-600"
           />
         </div>
         <div>
@@ -283,7 +291,7 @@ export default function Users() {
             min={0}
             value={formData.age}
             onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-600"
           />
         </div>
         <div>
@@ -291,14 +299,14 @@ export default function Users() {
           <select
             value={formData.gender}
             onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-600"
           >
             <option value="">Chọn giới tính</option>
             <option value="male">Nam</option>
             <option value="female">Nữ</option>
           </select>
         </div>
-        {/* Disabled selectedBikeId */}
+        {/* Disabled bike selection */}
         <div>
           <label className="block text-gray-700 font-medium mb-1">Selected Bike</label>
           <select
@@ -314,7 +322,7 @@ export default function Users() {
           <select
             value={formData.role}
             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-600"
           >
             <option value="user">User</option>
             <option value="admin">Admin</option>
@@ -324,13 +332,13 @@ export default function Users() {
           <button
             type="button"
             onClick={() => setShowAddForm(false)}
-            className="px-4 py-2 border rounded text-blue-600 hover:bg-blue-100"
+            className="px-4 py-2 border rounded text-blue-600 hover:bg-blue-100 transition"
           >
             Huỷ
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
           >
             Thêm User
           </button>
@@ -340,44 +348,43 @@ export default function Users() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <span className="text-white text-lg">👥</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                <p className="text-gray-600">Quản lý thông tin người dùng hệ thống</p>
-              </div>
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-500 rounded-full shadow-lg">
+              <UsersIcon className="w-7 h-7 text-white" />
             </div>
-            <div className="flex items-center space-x-3">
-              <button className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-blue-600">
-                📥 Export
-              </button>
-              <button
-                onClick={() => setShowAddForm(!showAddForm)}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                ➕ Add User
-              </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+              <p className="text-gray-600">Quản lý thông tin người dùng hệ thống</p>
             </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button className="flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition">
+              📥 Export
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              ➕ Add User
+            </button>
           </div>
         </div>
 
         {/* Add User Form */}
         {showAddForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Add New User</h2>
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-8 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Add New User</h2>
               <button
                 onClick={() => setShowAddForm(false)}
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="Close form"
               >
-                ❌
+                <X className="w-6 h-6" />
               </button>
             </div>
             <AddUserFormWithAutoUserId />
@@ -385,117 +392,118 @@ export default function Users() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-xl">👥</span>
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 uppercase">Total Users</p>
+              <p className="text-3xl font-bold text-gray-900">{users.length}</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <UsersIcon className="w-8 h-8 text-blue-600" />
             </div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">With Bikes</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {users.filter(
-                    (u) => u.selectedBikeId && u.selectedBikeId !== "none"
-                  ).length}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-xl">🚲</span>
-              </div>
+
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 uppercase">With Bikes</p>
+              <p className="text-3xl font-bold text-blue-600">
+                {users.filter((u) => u.selectedBikeId && u.selectedBikeId !== "none").length}
+              </p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <Bike className="w-8 h-8 text-blue-600" />
             </div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Male Users</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {users.filter((u) => normalizeGender(u.gender) === "male").length}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-xl">👨</span>
-              </div>
+
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 uppercase">Male Users</p>
+              <p className="text-3xl font-bold text-blue-600">
+                {users.filter((u) => normalizeGender(u.gender) === "male").length}
+              </p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <span className="text-4xl">👨</span>
             </div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Female Users</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {users.filter((u) => normalizeGender(u.gender) === "female").length}
-                </p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-xl">👩</span>
-              </div>
+
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-6 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-600 uppercase">Female Users</p>
+              <p className="text-3xl font-bold text-blue-600">
+                {users.filter((u) => normalizeGender(u.gender) === "female").length}
+              </p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-full">
+              <span className="text-4xl">👩</span>
             </div>
           </div>
         </div>
 
         {/* Search Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">🔍</span>
-              <h3 className="text-lg font-semibold text-gray-900">Search & Filters</h3>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-300 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3 text-gray-700">
+              <Search className="w-6 h-6 text-blue-600" />
+              <h3 className="text-xl font-semibold">Search & Filters</h3>
             </div>
             <button
               onClick={clearSearch}
-              className="flex items-center px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+              className="px-3 py-1.5 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition"
             >
               🔄 Clear
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">User ID</label>
               <input
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 placeholder="Search User ID"
                 value={search.userId}
                 onChange={(e) => setSearch({ ...search, userId: e.target.value })}
+                type="search"
+                autoComplete="off"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 placeholder="Search Email"
                 value={search.email}
                 onChange={(e) => setSearch({ ...search, email: e.target.value })}
+                type="search"
+                autoComplete="off"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
               <input
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 placeholder="Search Name"
                 value={search.name}
                 onChange={(e) => setSearch({ ...search, name: e.target.value })}
+                type="search"
+                autoComplete="off"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
               <input
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 placeholder="Search Age"
                 value={search.age}
                 onChange={(e) => setSearch({ ...search, age: e.target.value })}
+                type="number"
+                min={0}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 value={search.gender}
                 onChange={(e) => setSearch({ ...search, gender: e.target.value })}
               >
@@ -509,7 +517,7 @@ export default function Users() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Selected Bike</label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                 value={search.selectedBikeId}
                 onChange={(e) => setSearch({ ...search, selectedBikeId: e.target.value })}
               >
@@ -526,7 +534,7 @@ export default function Users() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
                   value={search.role || ""}
                   onChange={(e) => setSearch({ ...search, role: e.target.value })}
                 >
@@ -540,10 +548,12 @@ export default function Users() {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-300 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Users ({filteredUsers.length})</h3>
+              <h3 className="text-xl font-bold text-gray-900">
+                Users ({filteredUsers.length})
+              </h3>
               <div className="text-sm text-gray-500">
                 Showing {currentUsers.length} of {filteredUsers.length} filtered users (Page {currentPage} of {totalPages})
               </div>
@@ -551,23 +561,38 @@ export default function Users() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bike Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Bike Status
+                  </th>
                   {hasAdmin && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
                   )}
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentUsers.length === 0 && (
                   <tr>
-                    <td colSpan={hasAdmin ? 6 : 5} className="text-center py-12 text-gray-500">
+                    <td
+                      colSpan={hasAdmin ? 6 : 5}
+                      className="text-center py-12 text-gray-500"
+                    >
                       No matching users found.
                     </td>
                   </tr>
@@ -575,35 +600,43 @@ export default function Users() {
                 {currentUsers.map((user) => {
                   if (editingUserId === user.id) {
                     return (
-                      <tr key={`edit-${user.id}`} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-2 py-2">
-                          <div className="text-gray-600 select-none">{user.userId}</div>
+                      <tr
+                        key={`edit-${user.id}`}
+                        className="hover:bg-blue-50 transition-colors"
+                      >
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <div className="text-gray-600 select-none font-medium">
+                            {user.userId}
+                          </div>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <input
                             type="email"
-                            className="w-full border rounded px-2 py-1"
+                            className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-600"
                             value={editedUser.email || ""}
-                            onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                            onChange={(e) =>
+                              setEditedUser({ ...editedUser, email: e.target.value })
+                            }
                           />
                         </td>
-                        <td className="px-2 py-2 space-y-1">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500">Age</label>
+                        <td className="px-3 py-2">
+                          <div className="space-y-2">
                             <input
                               type="number"
                               min={0}
-                              className="w-full border rounded px-2 py-1"
+                              placeholder="Age"
+                              className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-600"
                               value={editedUser.age || ""}
-                              onChange={(e) => setEditedUser({ ...editedUser, age: e.target.value })}
+                              onChange={(e) =>
+                                setEditedUser({ ...editedUser, age: e.target.value })
+                              }
                             />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500">Gender</label>
                             <select
-                              className="w-full border rounded px-2 py-1"
+                              className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-600"
                               value={editedUser.gender || ""}
-                              onChange={(e) => setEditedUser({ ...editedUser, gender: e.target.value })}
+                              onChange={(e) =>
+                                setEditedUser({ ...editedUser, gender: e.target.value })
+                              }
                             >
                               <option value="">Chọn giới tính</option>
                               <option value="male">Nam</option>
@@ -611,11 +644,13 @@ export default function Users() {
                             </select>
                           </div>
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2 whitespace-nowrap">
                           <select
-                            className="w-full border rounded px-2 py-1"
+                            className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-600"
                             value={editedUser.selectedBikeId || "none"}
-                            onChange={(e) => setEditedUser({ ...editedUser, selectedBikeId: e.target.value })}
+                            onChange={(e) =>
+                              setEditedUser({ ...editedUser, selectedBikeId: e.target.value })
+                            }
                           >
                             <option value="none">Không có xe</option>
                             {bikes.map((bikeId, index) => (
@@ -626,29 +661,33 @@ export default function Users() {
                           </select>
                         </td>
                         {hasAdmin && (
-                          <td className="px-2 py-2">
+                          <td className="px-3 py-2 whitespace-nowrap">
                             <select
-                              className="w-full border rounded px-2 py-1"
+                              className="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-blue-600"
                               value={editedUser.role || "user"}
-                              onChange={(e) => setEditedUser({ ...editedUser, role: e.target.value })}
+                              onChange={(e) =>
+                                setEditedUser({ ...editedUser, role: e.target.value })
+                              }
                             >
                               <option value="user">User</option>
                               <option value="admin">Admin</option>
                             </select>
                           </td>
                         )}
-                        <td className="px-2 py-2 whitespace-nowrap">
+                        <td className="px-3 py-2 whitespace-nowrap space-x-2">
                           <button
                             onClick={saveUser}
-                            className="text-blue-600 hover:underline mr-2"
-                            title="Lưu"
+                            className="text-green-600 hover:text-green-800"
+                            title="Save"
+                            aria-label="Save user"
                           >
                             💾
                           </button>
                           <button
                             onClick={cancelEditing}
-                            className="text-gray-600 hover:underline"
-                            title="Huỷ"
+                            className="text-red-600 hover:text-red-800"
+                            title="Cancel"
+                            aria-label="Cancel editing"
                           >
                             ❌
                           </button>
@@ -657,60 +696,68 @@ export default function Users() {
                     );
                   }
                   return (
-                    <tr key={`view-${user.id}`} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                            <span className="text-blue-600">{getGenderIcon(user.gender)}</span>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{user.name || "N/A"}</div>
-                            <div className="text-sm text-gray-500">ID: {user.userId}</div>
-                          </div>
+                    <tr
+                      key={`view-${user.id}`}
+                      className="hover:bg-blue-50 transition-colors"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap flex items-center space-x-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <span className="text-blue-600">{getGenderIcon(user.gender)}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm text-gray-900">{user.email || "N/A"}</div>
-                          <div className="text-sm text-gray-500">📧 Email</div>
+                          <div className="text-sm font-semibold text-gray-900">{user.name || "N/A"}</div>
+                          <div className="text-xs text-gray-500">ID: {user.userId}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col space-y-1">
-                          <span className="text-sm font-medium text-gray-900">{user.age || "N/A"}</span>
-                          <span className="text-xs text-gray-500 capitalize">{user.gender || "N/A"}</span>
-                        </div>
+                        <div className="text-sm text-gray-900">{user.email || "N/A"}</div>
+                        <div className="text-xs text-gray-500">📧 Email</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap flex flex-col space-y-1">
+                        <span className="text-sm font-medium text-gray-900">{user.age || "N/A"}</span>
+                        <span className="text-xs text-gray-500 capitalize">{user.gender || "N/A"}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{getBikeStatus(user.selectedBikeId)}</td>
                       {hasAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                          {user.role === "admin" ? "Admin" : "User"}
+                          {user.role === "admin" ? (
+                            <span className="inline-flex items-center text-red-600 font-semibold space-x-1">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span>Admin</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-green-600 font-semibold">
+                              <CheckCircle className="w-4 h-4" />
+                              <span>User</span>
+                            </span>
+                          )}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="View"
-                            onClick={() => alert(`User Details:\n${JSON.stringify(user, null, 2)}`)}
-                          >
-                            👁️
-                          </button>
-                          <button
-                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="Edit"
-                            onClick={() => startEditing(user)}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Delete"
-                            onClick={() => deleteUser(user)}
-                          >
-                            🗑️
-                          </button>
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex space-x-3">
+                        <button
+                          className="p-2 hover:bg-blue-100 rounded-lg text-blue-600"
+                          title="View"
+                          onClick={() => alert(`User Details:\n${JSON.stringify(user, null, 2)}`)}
+                          aria-label="View user"
+                        >
+                          👁️
+                        </button>
+                        <button
+                          className="p-2 hover:bg-blue-100 rounded-lg text-blue-600"
+                          title="Edit"
+                          onClick={() => startEditing(user)}
+                          aria-label="Edit user"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="p-2 hover:bg-red-100 rounded-lg text-red-600"
+                          title="Delete"
+                          onClick={() => deleteUser(user)}
+                          aria-label="Delete user"
+                        >
+                          🗑️
+                        </button>
                       </td>
                     </tr>
                   );
@@ -719,23 +766,24 @@ export default function Users() {
             </table>
           </div>
 
+          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-3 border-t border-gray-200 flex justify-center space-x-3">
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-center space-x-3">
               <button
                 onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-blue-50 transition"
               >
-                {"<"} Prev
+                &lt; Prev
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => goToPage(pageNum)}
-                  className={`px-3 py-1 rounded border ${
+                  className={`px-4 py-2 rounded-lg border font-semibold transition ${
                     currentPage === pageNum
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white border-transparent shadow-lg"
                       : "border-gray-300 text-gray-700 hover:bg-gray-100"
                   }`}
                 >
@@ -746,9 +794,9 @@ export default function Users() {
               <button
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-blue-50 transition"
               >
-                Next {">"}
+                Next &gt;
               </button>
             </div>
           )}

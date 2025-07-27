@@ -187,7 +187,8 @@ export default function LocksManagement() {
     const lockToAdd = {
       lockId: newLock.lockId,
       status: "Khóa Mở",
-      bikeId: newLock.bikeId,
+      // bikeId: "newLock.bikeId",
+      bikeId: "",
       isValid: false,
       occupied: false,
       otp: "",
@@ -332,8 +333,8 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                   className="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed"
                 />
               </div>
-
-              {/* Thêm nhập bikeId khi thêm mới nếu cần */}
+{/* 
+              Thêm nhập bikeId khi thêm mới nếu cần
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Bike ID</label>
                 <input
@@ -343,7 +344,7 @@ Return Bike ID: ${lock.returnBikeId || "-"}`
                   className="w-full border border-gray-300 rounded px-3 py-2"
                   placeholder="Nhập Bike ID (nếu có)"
                 />
-              </div>
+              </div> */}
 
               <div className="flex items-end">
                 <button
