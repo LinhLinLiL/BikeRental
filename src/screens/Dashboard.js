@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [rentalList, setRentalList] = useState([]);
+  const [bikeList, setBikeList] = useState([]); // Dynamic bike list from database
   const [filter, setFilter] = useState({
     returnType: "all",
     userId: "",
@@ -38,11 +39,10 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Kiểm tra trạng thái đăng nhập khi component mount
+  // Check authentication state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
-        // Nếu chưa login thì chuyển về login
         navigate("/login");
       } else {
         setAuthChecked(true);
@@ -52,7 +52,24 @@ const Dashboard = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Load dữ liệu rentalList realtime từ Firebase hoàn thành chỉ khi đã xác thực
+  // Load bike list from Firebase Realtime Database (assumes node "bikes")
+  useEffect(() => {
+    const bikeRef = ref(db, "bikes");
+    const unsubscribe = onValue(bikeRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        setBikeList([]);
+        return;
+      }
+      // Extract bike IDs from keys
+      const bikes = Object.keys(data);
+      setBikeList(bikes);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Load rental history list realtime, only after auth checked
   useEffect(() => {
     if (!authChecked) return;
 
@@ -73,7 +90,7 @@ const Dashboard = () => {
           id,
         }));
 
-        // Sắp xếp ngày thuê mới nhất lên đầu
+        // Sort by most recent borrowTimestamp
         rentals.sort((a, b) => b.borrowTimestamp - a.borrowTimestamp);
 
         setRentalList(rentals);
@@ -89,6 +106,7 @@ const Dashboard = () => {
     return () => unsubscribe();
   }, [authChecked]);
 
+  // Helper to format timestamps to YYYY-MM-DD string
   const formatDateToYMD = (timestamp) => {
     if (!timestamp) return "";
     const d = new Date(timestamp);
@@ -98,6 +116,7 @@ const Dashboard = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // Filter rental records based on filter state
   const filteredRentals = useMemo(() => {
     return rentalList.filter((rental) => {
       const { returnType, userId, bikeId, stationId, borrowed, returned } =
@@ -119,6 +138,7 @@ const Dashboard = () => {
     });
   }, [rentalList, filter]);
 
+  // Compute statistics from filtered list
   const stats = useMemo(() => {
     const totalRentals = filteredRentals.length;
     const completedRentals = filteredRentals.filter(
@@ -346,6 +366,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
+              {/* Bike ID filter (from Firebase) */}
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-gray-700">
                   Mã Xe Đạp
@@ -353,18 +374,14 @@ const Dashboard = () => {
                 <select
                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm shadow-sm"
                   value={filter.bikeId}
-                  onChange={(e) =>
-                    setFilter({ ...filter, bikeId: e.target.value })
-                  }
+                  onChange={(e) => setFilter({ ...filter, bikeId: e.target.value })}
                 >
                   <option value="">Tất cả</option>
-                  {Array.from({ length: 9 }, (_, i) => `bike${i + 1}`).map(
-                    (bike) => (
-                      <option key={bike} value={bike}>
-                        {bike}
-                      </option>
-                    )
-                  )}
+                  {bikeList.map((bike) => (
+                    <option key={bike} value={bike}>
+                      {bike}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -476,7 +493,7 @@ const Dashboard = () => {
                     </td>
                   </tr>
                 ) : (
-                  currentRentals.map((rental, index) => (
+                  currentRentals.map((rental) => (
                     <tr
                       key={rental.id}
                       className="hover:bg-blue-50/30 transition-all duration-200 group"
