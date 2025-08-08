@@ -1,7 +1,7 @@
 import {
   // FaUser,
   FaBicycle,
-  FaCamera,
+  // FaCamera,
   FaCog,
   FaSignOutAlt,
   FaBell,
@@ -76,7 +76,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { path: "/dashboard", icon: FaTachometerAlt, label: "Dashboard", category: "main" },
-    { path: "/detect-plate", icon: FaCamera, label: "Nhận Diện Biển Số", badge: "New", category: "main" },
+    // { path: "/detect-plate", icon: FaCamera, label: "Nhận Diện Biển Số", badge: "New", category: "main" },
     { path: "/users", icon: FaUsers, label: "Quản Lý Người Dùng", category: "management" },
     { path: "/bikes", icon: FaBicycle, label: "Quản Lý Xe Đạp", category: "management" },
     { path: "/locks", icon: FaKey, label: "Quản Lý Khóa", category: "management" },

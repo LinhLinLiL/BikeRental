@@ -11,7 +11,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Calendar,
-  TrendingUp,
+  // TrendingUp,
 } from "lucide-react";
 
 import { db } from "../firebase";
@@ -248,10 +248,10 @@ const Dashboard = () => {
                 <p className="text-3xl font-bold text-gray-800 mt-2">
                   {stats.totalRentals}
                 </p>
-                <div className="flex items-center mt-2 text-green-600">
+                {/* <div className="flex items-center mt-2 text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   <span className="text-sm font-medium">+12%</span>
-                </div>
+                </div> */}
               </div>
               <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 rounded-xl shadow-lg">
                 <Users className="w-8 h-8 text-white" />
@@ -268,10 +268,10 @@ const Dashboard = () => {
                 <p className="text-3xl font-bold text-gray-800 mt-2">
                   {Math.round(stats.averageDuration / 1000)}s
                 </p>
-                <div className="flex items-center mt-2 text-green-600">
+                {/* <div className="flex items-center mt-2 text-green-600">
                   <TrendingUp className="w-4 h-4 mr-1" />
                   <span className="text-sm font-medium">Ổn định</span>
-                </div>
+                </div> */}
               </div>
               <div className="bg-gradient-to-br from-green-400 to-green-600 p-4 rounded-xl shadow-lg">
                 <Clock className="w-8 h-8 text-white" />

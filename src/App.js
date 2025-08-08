@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 
-import DetectPlate from "./pages/DetectPlate";
+// import DetectPlate from "./pages/DetectPlate";
 import Dashboard from "./screens/Dashboard";
 import Users from "./screens/Users";
 import Bikes from "./screens/Bikes";
@@ -43,7 +43,7 @@ function App() {
             </RequireAuth>
           }
         />
-        <Route
+        {/* <Route
           path="/detect-plate"
           element={
             <RequireAuth>
@@ -52,7 +52,7 @@ function App() {
               </LayoutWithSidebar>
             </RequireAuth>
           }
-        />
+        /> */}
         <Route
           path="/users"
           element={
