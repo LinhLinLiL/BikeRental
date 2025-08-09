@@ -5,12 +5,19 @@ import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 
 // import DetectPlate from "./pages/DetectPlate";
-import Dashboard from "./screens/Dashboard";
-import Users from "./screens/Users";
-import Bikes from "./screens/Bikes";
-import Locks from "./screens/Locks";
-import Statics from "./screens/StationStats";
+import Dashboard from "./components/Dashboard/Dashboard";
+import Users from "./components/UsersManagement/UsersManagement";
+import Bikes from "./components/BikesManagement/BikesManagement";
+import Locks from "./components/LockManagement/LocksManagement";
+import Statics from "./components/StationStats/StationStats";
 import Login from "./screens/Login";
+
+// import Users from "./screens/Users";
+// import Dashboard from "./screens/Dashboard";
+// import Bikes from "./screens/Bikes";
+// import Locks from "./screens/Locks";
+// import Statics from "./screens/StationStats";
+
 
 import RequireAuth from "./RequireAuth";
 

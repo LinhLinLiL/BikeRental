@@ -185,6 +185,32 @@ const Dashboard = () => {
     };
   }, [filteredRentals]);
 
+  // --- BỔ SUNG: Tổng lượt thuê theo tháng và tính tăng giảm ---
+  const rentalsPerMonth = useMemo(() => {
+    const counts = {};
+    filteredRentals.forEach((rental) => {
+      if (!rental.borrowTimestamp) return;
+      const date = new Date(rental.borrowTimestamp);
+      const ym = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      counts[ym] = (counts[ym] || 0) + 1;
+    });
+
+    // Tính chênh lệch so với tháng liền trước
+    const sortedMonths = Object.keys(counts).sort();
+    const diffs = {};
+    for (let i = 0; i < sortedMonths.length; i++) {
+      const month = sortedMonths[i];
+      if (i === 0) {
+        diffs[month] = 0; // Tháng đầu tiên không có tháng trước để so sánh
+      } else {
+        const prevMonth = sortedMonths[i - 1];
+        diffs[month] = counts[month] - counts[prevMonth];
+      }
+    }
+
+    return { counts, diffs };
+  }, [filteredRentals]);
+
   const totalPages = Math.ceil(filteredRentals.length / itemsPerPage);
   const currentRentals = filteredRentals.slice(
     (currentPage - 1) * itemsPerPage,
@@ -248,10 +274,6 @@ const Dashboard = () => {
                 <p className="text-3xl font-bold text-gray-800 mt-2">
                   {stats.totalRentals}
                 </p>
-                {/* <div className="flex items-center mt-2 text-green-600">
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">+12%</span>
-                </div> */}
               </div>
               <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-4 rounded-xl shadow-lg">
                 <Users className="w-8 h-8 text-white" />
@@ -268,10 +290,6 @@ const Dashboard = () => {
                 <p className="text-3xl font-bold text-gray-800 mt-2">
                   {Math.round(stats.averageDuration / 1000)}s
                 </p>
-                {/* <div className="flex items-center mt-2 text-green-600">
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">Ổn định</span>
-                </div> */}
               </div>
               <div className="bg-gradient-to-br from-green-400 to-green-600 p-4 rounded-xl shadow-lg">
                 <Clock className="w-8 h-8 text-white" />
@@ -366,7 +384,6 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Bike ID filter (from Firebase) */}
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-gray-700">
                   Mã Xe Đạp
@@ -696,25 +713,70 @@ const Dashboard = () => {
             </div>
             <div className="p-6 max-h-80 overflow-y-auto">
               <div className="space-y-3">
-                {Object.entries(stats.rentalsPerStation).map(
-                  ([stationId, count]) => (
-                    <div
-                      key={stationId}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
-                    >
-                      <span className="text-sm font-medium text-gray-700">
-                        {stationId}
-                      </span>
-                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
-                        {count}
-                      </span>
-                    </div>
-                  )
-                )}
+                {Object.entries(stats.rentalsPerStation).map(([stationId, count]) => (
+                  <div
+                    key={stationId}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                  >
+                    <span className="text-sm font-medium text-gray-700">
+                      {stationId}
+                    </span>
+                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                      {count}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
+
+        {/* -- BỔ SUNG: Thống kê Tổng Lượt Thuê Theo Tháng có mũi tên tăng giảm -- */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 overflow-hidden max-w-3xl mx-auto mt-8">
+  <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-gray-100">
+    <h3 className="text-lg font-bold text-gray-800 flex items-center">
+      <Clock className="w-5 h-5 mr-2 text-blue-600" />
+      Tổng Lượt Thuê Theo Tháng
+    </h3>
+  </div>
+  <div className="p-6 max-h-80 overflow-y-auto">
+    {Object.keys(rentalsPerMonth.counts).length === 0 ? (
+      <p className="text-gray-600">Không có dữ liệu thống kê theo tháng</p>
+    ) : (
+      <div className="space-y-3">
+        {Object.keys(rentalsPerMonth.counts)
+          .sort((a, b) => b.localeCompare(a)) /* tháng mới nhất lên trên */
+          .map((month) => {
+            const count = rentalsPerMonth.counts[month];
+            const diff = rentalsPerMonth.diffs[month];
+            const isIncrease = diff > 0;
+            return (
+              <div
+                key={month}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+              >
+                <span className="font-mono text-sm text-gray-700">{month}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-gray-900">{count} lượt thuê</span>
+                  {diff !== 0 && (
+                    <span
+                      className={`text-sm font-bold ${
+                        isIncrease ? "text-green-600" : "text-red-600"
+                      } flex items-center`}
+                      title={isIncrease ? "Tăng so với tháng trước" : "Giảm so với tháng trước"}
+                    >
+                      {isIncrease ? "🔺" : "🔻"} {Math.abs(diff)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    )}
+  </div>
+</div>
+
 
         {/* Footer Info */}
         {filteredRentals.length > 0 && (
