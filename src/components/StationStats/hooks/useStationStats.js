@@ -11,7 +11,7 @@ export default function useStationStats() {
       const data = snapshot.val();
       if (data) {
         const list = Object.values(data).map((item) => ({
-          stationId: item.stationId || "Unknown",
+          stationId: item.stationId || "",
           rentals: item.rentals || 0,
           returns: item.returns || 0,
           emergencyReturns: item.emergencyReturns || 0,

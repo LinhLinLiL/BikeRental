@@ -73,30 +73,43 @@ export default function UsersManagement() {
     return lower;
   };
 
-  // Lọc users theo filter search
-  const filteredUsers = useMemo(() => {
-    return users.filter((u) =>
-      Object.keys(search).every((key) => {
-        const userValue = (u[key] || "").toString().toLowerCase();
-        const searchValue = (search[key] || "").toString().toLowerCase();
+// Lọc users theo filter search
+const filteredUsers = useMemo(() => {
+  return users.filter((u) =>
+    Object.keys(search).every((key) => {
+      const userValue = (u[key] || "").toString().toLowerCase();
+      const searchValue = (search[key] || "").toString().toLowerCase();
 
-        if (key === "gender") {
-          if (!searchValue) return true;
-          return normalizeGender(userValue) === normalizeGender(searchValue);
+      if (key === "gender") {
+        if (!searchValue) return true;
+        return normalizeGender(userValue) === normalizeGender(searchValue);
+      }
+
+      if (key === "selectedBikeId") {
+        if (searchValue === "") return true;
+        if (searchValue === "none") return userValue === "none";
+        return userValue === searchValue;
+      }
+
+      if (key === "role") {
+        if (!searchValue) return true;
+
+        if (searchValue === "user") {
+          return userValue === "user" || u.role === undefined;
         }
-        if (key === "selectedBikeId") {
-          if (searchValue === "") return true;
-          if (searchValue === "none") return userValue === "none";
-          return userValue === searchValue;
+
+        if (searchValue === "admin") {
+          return userValue === "admin";
         }
-        if (key === "role") {
-          if (!searchValue) return true;
-          return userValue === searchValue;
-        }
-        return userValue.includes(searchValue);
-      })
-    );
-  }, [users, search]);
+
+        return false;
+      }
+
+      return userValue.includes(searchValue);
+    })
+  );
+}, [users, search]);
+
 
   // Reset page khi filter thay đổi
   useEffect(() => {

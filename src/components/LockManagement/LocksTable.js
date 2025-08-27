@@ -132,6 +132,7 @@ const LocksTable = ({
                         >
                           👁️
                         </button>
+                    
                         <button
                           onClick={() => handleEditClick(lock)}
                           className="text-green-600 hover:bg-green-100 p-1 rounded"

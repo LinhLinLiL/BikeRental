@@ -13,7 +13,7 @@ export default function useLocksData(authChecked, filter, setFilter) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newLock, setNewLock] = useState({
     lockId: "",
-    status: "Khóa Mở",
+    // status: "Khóa Mở",
     bikeId: "",
     isValid: false,
     occupied: false,
@@ -37,11 +37,11 @@ export default function useLocksData(authChecked, filter, setFilter) {
     const unsubscribe = onValue(locksRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const lockList = Object.entries(data).map(([id, lock]) => ({
-          id,
-          ...lock,
-        }));
-        setLocks(lockList);
+        const locksArray = Object.entries(data).map(([key, value]) => ({
+        id: key, // chỉ dùng cho React render
+        ...value,
+      }));
+        setLocks(locksArray);
       } else {
         setLocks([]);
       }
@@ -79,7 +79,7 @@ export default function useLocksData(authChecked, filter, setFilter) {
   const resetNewLockForm = () => {
     setNewLock({
       lockId: createNewLockId(),
-      status: "Khóa Mở",
+      // status: "Khóa Mở",
       bikeId: "",
       isValid: false,
       occupied: false,
@@ -145,7 +145,7 @@ export default function useLocksData(authChecked, filter, setFilter) {
 
     const lockToAdd = {
       lockId: newLock.lockId,
-      status: "Khóa Mở",
+      // status: "Khóa Mở",
       bikeId: "",
       isValid: false,
       occupied: false,
@@ -176,13 +176,13 @@ export default function useLocksData(authChecked, filter, setFilter) {
   const handleSaveEdit = () => {
     if (!editLockId) return;
 
-    const status =
-      editLockData.isValid && editLockData.occupied
-        ? "Có Xe, Khóa Đóng"
-        : "Khóa Mở";
+    // const status =
+    //   editLockData.isValid && editLockData.occupied
+    //     ? "Có Xe, Khóa Đóng"
+    //     : "Khóa Mở";
 
     const lockRef = ref(db, `locks/${editLockId}`);
-    update(lockRef, { ...editLockData, status })
+    update(lockRef, { ...editLockData })
       .then(() => {
         setEditLockId(null);
         setEditLockData({});

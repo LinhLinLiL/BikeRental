@@ -73,7 +73,7 @@ export default function useUsersData(authChecked) {
         }
         if (key === "selectedBikeId") {
           if (searchValue === "") return true;
-          if (searchValue === "none") return userValue === "none";
+          if (searchValue === "") return userValue === "";
           return userValue === searchValue;
         }
         if (key === "role") {
@@ -106,8 +106,8 @@ export default function useUsersData(authChecked) {
         age: editedUser.age || "",
         gender: editedUser.gender || "",
         selectedBikeId:
-          !editedUser.selectedBikeId || editedUser.selectedBikeId === "none"
-            ? "none"
+          !editedUser.selectedBikeId || editedUser.selectedBikeId === ""
+            ? ""
             : editedUser.selectedBikeId,
         role: editedUser.role === "admin" ? "admin" : "user",
       };

@@ -1,6 +1,6 @@
 import { Filter, RefreshCw, Search } from "lucide-react";
 
-export default function FilterPanel({ filter, setFilter, clearFilters, bikes, lockOptions }) {
+export default function FilterPanel({ filter, setFilter, clearFilters, bikes, allLockIds }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -41,11 +41,9 @@ export default function FilterPanel({ filter, setFilter, clearFilters, bikes, lo
             onChange={(e) => setFilter({ ...filter, currentLockId: e.target.value })}
           >
             <option value="">All</option>
-            {lockOptions.map((lock) => (
-              <option key={lock} value={lock}>
-                {lock}
-              </option>
-            ))}
+           {allLockIds.map(lock => (
+    <option key={lock} value={lock}>{lock}</option>
+  ))}
           </select>
         </div>
 

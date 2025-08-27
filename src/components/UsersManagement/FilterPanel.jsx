@@ -70,8 +70,8 @@ export default function FilterPanel({ filter, setFilter, clearFilter, bikes = []
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
           >
             <option value="">All Genders</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            {/* <option value="male">Male</option>
+            <option value="female">Female</option> */}
             <option value="nam">Nam</option>
             <option value="nữ">Nữ</option>
           </select>
@@ -84,7 +84,7 @@ export default function FilterPanel({ filter, setFilter, clearFilter, bikes = []
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600"
           >
             <option value="">All Bikes</option>
-            <option value="none">None</option>
+            {/* <option value="none">None</option> */}
             {bikes.map((bikeId, i) => (
               <option key={bikeId || i} value={bikeId}>
                 {bikeId}
@@ -102,6 +102,7 @@ export default function FilterPanel({ filter, setFilter, clearFilter, bikes = []
             <option value="">All Roles</option>
             <option value="user">User</option>
             <option value="admin">Admin</option>
+  
           </select>
         </div>
       </div>

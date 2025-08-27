@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { ref, get } from "firebase/database";
+import { auth, db } from "../firebase"; // db là Realtime Database
 import { useNavigate } from "react-router-dom";
 import BikeImage from './assets/bike.jpg';
-
-const ADMIN_EMAIL = "linhpnhe176376@fpt.edu.vn"; // Thay bằng email admin của bạn
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -22,20 +21,61 @@ const Login = () => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      if (user.email !== ADMIN_EMAIL) {
+      // Lấy thông tin người dùng từ Realtime Database theo uid
+      const userRef = ref(db, `users/${user.uid}`);
+      const snapshot = await get(userRef);
+
+      if (!snapshot.exists()) {
         await signOut(auth);
-        setError("Chỉ tài khoản admin được phép đăng nhập.");
+        setError("Tài khoản chưa được cấp quyền.");
         setIsLoading(false);
         return;
       }
 
-      // Lưu thời gian login để giới hạn phiên (5 phút tại chỗ khác)
+      const userData = snapshot.val();
+
+      // Kiểm tra email trong database có trùng với email đăng nhập không
+      if (userData.email !== user.email) {
+        await signOut(auth);
+        setError("Email không đúng.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Kiểm tra role có phải admin không
+      if (userData.role !== "admin") {
+        await signOut(auth);
+        setError("Chỉ tài khoản admin được phép đăng nhập.");
+        return;
+      }
+
+      // Lưu thời gian đăng nhập để giới hạn phiên (ví dụ: 5 phút tại chỗ khác)
       localStorage.setItem("loginTime", Date.now().toString());
 
       // Điều hướng tới dashboard
       navigate("/dashboard");
     } catch (err) {
-      setError("Sai email hoặc mật khẩu");
+      // Xử lý thông báo lỗi dựa trên mã lỗi của Firebase
+      switch (err.code) {
+        case "auth/user-not-found":
+          setError("Tài khoản không tồn tại.");
+          break;
+        case "auth/wrong-password":
+          setError("Mật khẩu không đúng.");
+          break;
+        case "auth/invalid-email":
+          setError("Email không hợp lệ.");
+          break;
+        case "auth/user-disabled":
+          setError("Tài khoản đã bị khóa.");
+          break;
+        case "auth/too-many-requests":
+          setError("Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.");
+          break;
+        default:
+          setError("Lỗi đăng nhập: " + err.message);
+          break;
+      }
       setIsLoading(false);
     }
   };
@@ -46,10 +86,7 @@ const Login = () => {
         {/* Illustration Section */}
         <div className="hidden lg:flex flex-col items-center justify-center text-center space-y-6">
           <div className="relative w-96 h-96">
-            {/* Background Circle */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full opacity-30"></div>
-
-            {/* Person on Bicycle Illustration */}
             <img
               src={BikeImage}
               alt="Person riding a blue bicycle"
@@ -71,7 +108,6 @@ const Login = () => {
         {/* Login Form Section */}
         <div className="w-full max-w-md mx-auto">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            {/* Header */}
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white text-2xl font-bold">🚴‍♂️</span>
@@ -80,7 +116,6 @@ const Login = () => {
               <p className="text-gray-600 text-sm">Truy cập hệ thống quản lý Smart Bike</p>
             </div>
 
-            {/* Error Message */}
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-red-600 text-sm text-center flex items-center justify-center">
@@ -89,7 +124,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* Form */}
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">Họ tên đầy đủ</label>
@@ -148,10 +182,13 @@ const Login = () => {
                 />
                 <label htmlFor="terms" className="ml-2 block text-sm text-gray-600">
                   Tôi đồng ý với{" "}
-                  {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                  <a href="#" className="text-blue-600 hover:underline">
+                  <button
+                    type="button"
+                    onClick={(e) => e.preventDefault()}
+                    className="text-blue-600 hover:underline bg-transparent p-0"
+                  >
                     Điều khoản & Điều kiện
-                  </a>
+                  </button>
                 </label>
               </div>
 
@@ -171,7 +208,6 @@ const Login = () => {
               </button>
             </form>
 
-            {/* Footer */}
             <div className="mt-8 text-center">
               <p className="text-xs text-gray-500">Bảo mật bởi Smart Bike Management System</p>
             </div>

@@ -27,7 +27,7 @@ export default function useBikesData(authChecked) {
     bikeId: "",
     currentLockId: "",
     status: "locked",
-    currentUserId: "none",
+    currentUserId: "",
   });
 
   // Load realtime data khi auth đã xác nhận
@@ -72,7 +72,7 @@ export default function useBikesData(authChecked) {
 
   // Lock id được sử dụng trong bike
   const usedLockIds = useMemo(() => 
-    bikes.map((bike) => bike.currentLockId).filter((lid) => lid && lid !== "none"), [bikes]);
+    bikes.map((bike) => bike.currentLockId).filter((lid) => lid && lid !== ""), [bikes]);
 
   // Tất cả lockId
   const allLockIds = useMemo(() => locks.map((lock) => lock.lockId).filter(Boolean), [locks]);
@@ -89,7 +89,7 @@ export default function useBikesData(authChecked) {
       const matchStatus = !filter.status || bike.status === filter.status;
 
       const inputUser = (filter.currentUserId || "").trim().toLowerCase();
-      const bikeUser = (bike.currentUserId || "none").toLowerCase();
+      const bikeUser = (bike.currentUserId || "").toLowerCase();
       const matchUser = inputUser === "" || bikeUser.includes(inputUser);
 
       return matchBikeId && matchLockId && matchStatus && matchUser;
@@ -135,7 +135,7 @@ export default function useBikesData(authChecked) {
       bikeId: createNewBikeId(),
       currentLockId: "",
       status: "locked",
-      currentUserId: "none",
+      currentUserId: "",
     });
   };
 
@@ -246,5 +246,5 @@ export default function useBikesData(authChecked) {
     totalPages,
     currentPage,
     getStatusBadge,
-  };
+    allLockIds  };
 }

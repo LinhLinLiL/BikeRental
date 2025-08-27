@@ -5,7 +5,9 @@ import StationChart from "./StationChart";
 import StationDetail from "./StationDetail";
 
 export default function StationStats() {
-  const { stations, totalRentals, totalReturns, totalEmergencies, utilizationRate } = useStationStats();
+  const { stations, totalRentals, totalReturns, totalEmergencies, 
+    // utilizationRate 
+  } = useStationStats();
 
   if (stations.length === 0) {
     return (
@@ -26,11 +28,11 @@ export default function StationStats() {
       </header>
 
       {/* Cards thống kê */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard title="Tổng Số Thuê" value={totalRentals} icon="🚴‍♂️" color="text-blue-600" subtitle="Tất cả trạm" />
         <StatCard title="Tổng Số Trả" value={totalReturns} icon="🔄" color="text-green-600" subtitle="Hoàn thành" />
         <StatCard title="Trả Khẩn Cấp" value={totalEmergencies} icon="🚨" color="text-red-600" subtitle="Cần xử lý" />
-        <StatCard title="Tỷ Lệ Sử Dụng" value={`${utilizationRate}%`} icon="📊" color="text-purple-600" subtitle="Hiệu suất trung bình" />
+        {/* <StatCard title="Tỷ Lệ Sử Dụng" value={`${utilizationRate}%`} icon="📊" color="text-purple-600" subtitle="Hiệu suất trung bình" /> */}
       </div>
 
       {/* Biểu đồ tổng quan và phân phối */}

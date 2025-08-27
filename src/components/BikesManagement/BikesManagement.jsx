@@ -9,7 +9,7 @@ import BikesTable from "./BikesTable";
 import StatCard from "./StatCards";
 import AddBikeForm from "./AddBikeForm";
 
-import { Bike, Lock, CheckCircle, User, Plus, Download } from "lucide-react";
+import { Bike, Lock, CheckCircle, User, Plus  } from "lucide-react";
 
 export default function BikesManagement() {
   const navigate = useNavigate();
@@ -41,6 +41,7 @@ export default function BikesManagement() {
     setNewBike,
     resetNewBikeForm,
     lockOptions,
+    allLockIds,
     handleAddBike,
     handleEditClick,
     handleCancelEdit,
@@ -80,8 +81,11 @@ export default function BikesManagement() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-blue-600">
-              <Download className="w-4 h-4 mr-2" /> Export
+             <button
+              className="flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition"
+              onClick={() => alert("Chức năng Export chưa có")}
+            >
+              📥 Export
             </button>
             <button
               onClick={handleToggleAddForm}
@@ -107,7 +111,7 @@ export default function BikesManagement() {
         </div>
 
         {/* Filter Panel */}
-        <FilterPanel filter={filter} setFilter={setFilter} clearFilters={() => setFilter({ bikeId: "", currentLockId: "", status: "", currentUserId: "" })} bikes={bikes} lockOptions={lockOptions} />
+        <FilterPanel filter={filter} setFilter={setFilter} clearFilters={() => setFilter({ bikeId: "", currentLockId: "", status: "", currentUserId: "" })} bikes={bikes}  allLockIds={allLockIds}  />
 
         {/* Bikes Table */}
         <BikesTable
